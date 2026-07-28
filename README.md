@@ -1,211 +1,246 @@
-# TaskForge
+# TaskForge — Task Management System
 
-A task and workforce management platform built by **Ayush Yadav**.
+> Built by **Ayush Yadav** · Flask · MySQL · Vanilla JS
 
-TaskForge lets an organization manage departments, employee profiles, and
-tasks, then assign that work to employees and track completion in real time
-from a clean, modern dashboard — with a separate lightweight workspace for
-employees to see and update only what's assigned to them.
+[![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=white)](https://mysql.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Overview
+TaskForge is a full-featured, role-based task management web application. Admins create tasks and assign them to employees, managers oversee their teams, and employees track and update their own work — all inside a polished UI with **drag-and-drop kanban boards**, **3D-tilt cards**, **confetti celebrations**, and real-time **skeleton loaders**.
 
-The app ships with two experiences:
-
-- **Admin / Manager dashboard** — animated overview stats and completion
-  ring, a Kanban + table view of every task, employee & department
-  management, and a full activity log.
-- **Employee workspace** — a focused Kanban of just-my-tasks, with inline
-  status/progress/remarks updates and a profile page.
-
-Everything is driven by one REST API and a session-based login, so the same
-backend serves both experiences based on the signed-in user's role
-(`admin`, `manager`, or `employee`).
-
-### Signing up vs. being added
-
-New people can **self-register at `/signup`** — they pick a department, and
-the system provisions their login plus an employee profile (auto-generating
-an employee code like `ENG-003`). Self-signup always creates a plain
-`employee` account.
-
-Elevated access is deliberately not self-service:
-
-| Action | Employee | Manager | Admin |
-|---|:--:|:--:|:--:|
-| Sign up for an employee account | ✅ | ✅ | ✅ |
-| Create employee accounts | — | ✅ | ✅ |
-| Create **manager / admin** accounts | — | — | ✅ |
-| Manage departments | — | ✅ | ✅ |
-
-The "Access level" selector only appears in the employee form for admins,
-and the server enforces the same rule independently — a manager who forges
-the request gets a `403`.
-
-## Architecture
-
-```
-Task_Management/
-├── backend/
-│   ├── requirements.txt
-│   ├── run.py                       # dev entrypoint: python run.py
-│   ├── .env.example                 # copy to .env and fill in DB credentials
-│   └── task_management/
-│       ├── __init__.py              # app factory: create_app()
-│       ├── config.py                # reads DB_HOST/DB_USER/... from .env
-│       ├── extensions.py            # db = SQLAlchemy()
-│       ├── auth_decorators.py       # @login_required / @roles_required
-│       ├── seed.py                  # sample departments/users/tasks
-│       ├── models/                  # SQLAlchemy ORM models, one per table
-│       ├── routes/                  # Flask blueprints — one per resource
-│       └── services/                # business logic + validation
-├── database/
-│   └── schema.sql                   # MySQL DDL — run once against a fresh DB
-├── frontend/
-│   ├── index.html                   # login
-│   ├── signup.html                  # self-service registration
-│   ├── admin.html / js/admin.js     # admin & manager dashboard
-│   ├── employee.html / js/employee.js # employee workspace
-│   ├── css/style.css                # design system (light + dark)
-│   └── js/api.js                    # shared fetch/motion/auth-guard helpers
-└── setup_project.bat                # one-shot bootstrap (venv, deps, .env)
-```
-
-Flask serves the `frontend/` folder directly as static files, so there's a
-single process and a single port — no separate frontend build step or dev
-server.
-
-## Data model
-
-| Table              | Purpose                                                         |
-|---------------------|------------------------------------------------------------------|
-| `users`             | Login accounts — role is `admin`, `manager`, or `employee`      |
-| `departments`       | Organizational department master list                           |
-| `employees`         | HR profile, linked 1:1 to a user account                        |
-| `tasks`             | Task definitions (title, priority, estimated hours, notes)      |
-| `task_assignments`  | Junction table: which employee is doing which task, with status/% |
-| `activity_logs`     | Audit trail of who did what, and when                           |
-
-## Getting started
-
-**Requirements:** Python 3.10+ and a running MySQL 8 server.
-
-```bash
-# 1. Create an empty database
-mysql -u root -p -e "CREATE DATABASE taskforge"
-
-# 2. Set up the backend
-cd backend
-python -m venv venv
-venv\Scripts\activate            # Windows — use `source venv/bin/activate` on macOS/Linux
-pip install -r requirements.txt
-copy .env.example .env           # then edit .env with your MySQL credentials
-
-# 3. Create the tables and load sample data
-set FLASK_APP=task_management     # Windows — use `export FLASK_APP=task_management` on macOS/Linux
-flask init-db
-flask seed
-
-# 4. Run the app
-python run.py
-```
-
-Then open **http://localhost:5000**.
-
-`setup_project.bat` in the project root automates steps 2–3's setup (venv,
-pip install, `.env` scaffolding) if you're on Windows.
-
-Prefer raw SQL over the ORM's `flask init-db`? Run
-[`database/schema.sql`](database/schema.sql) against your database directly
-with `mysql -u root -p taskforge < database/schema.sql` instead.
-
-### This machine's local MySQL
-
-This project's MySQL server was installed with `scoop install mysql-lts`
-(no admin rights needed, no Windows service — it's a set of binaries under
-`~\scoop\apps\mysql-lts`). It is **not** configured to start automatically,
-so after a reboot:
-
-```bash
-start_mysql.bat     # from the project root — leave the window open
-```
-
-Credentials already set up and saved to `backend/.env` (gitignored, so
-they never get committed):
-
-| User | Password | Used for |
-|---|---|---|
-| `root` | `TaskForgeRoot#2026` | Admin access via `mysql -u root -p`, MySQL Workbench, etc. |
-| `taskforge_app` | `TaskForgeApp#2026` | What the Flask app actually connects as (least-privilege — scoped to the `taskforge` database only) |
-
-To connect manually and poke around: `mysql -u root -p` (enter the password
-above), then `USE taskforge;`.
-
-### Demo accounts
-
-| Role     | Username        | Password        |
-|----------|-----------------|-----------------|
-| Admin    | `ayush.yadav`   | `Ayush@123`     |
-| Manager  | `priya.mehta`   | `Manager@123`   |
-| Employee | `aarav.sharma`  | `Employee@123`  |
-| Employee | `rohan.patel`   | `Employee@123`  |
-| Employee | `ananya.iyer`   | `Employee@123`  |
-| Employee | `kabir.singh`   | `Employee@123`  |
-
-Re-run `flask seed` at any time — it drops and recreates every table, so
-you're back to this exact sample state (a fresh `flask init-db` is not
-needed after `seed`, since seed re-creates the schema itself).
-
-## Core functionality
-
-- **Authentication** — self-service signup, session-based login/logout,
-  change password, `/me` profile endpoint. Passwords are hashed with
-  Werkzeug's `scrypt`, never stored in plain text.
-- **Role-based access** — `admin`/`manager` can manage employees and
-  departments, but only an `admin` can grant manager or admin access; every
-  authenticated user can view and act on tasks and assignments.
-- **Tasks** — create, read, update, delete, and filter by priority, creator,
-  or assignment status.
-- **Employees & departments** — CRUD for employee profiles (optionally
-  provisioning their login in the same step), department master list.
-- **Assignments** — assign a task to an employee, update status
-  (`Pending` → `In Progress` → `Completed`/`On Hold`/`Cancelled`) and
-  completion percentage, add remarks, or unassign.
-- **Activity log** — every create/update/delete is recorded with a
-  before/after snapshot for auditing.
-- **Dashboard stats** — live counts, an animated completion ring, and a
-  status breakdown for the overview page.
-
-## Interface
-
-The UI is hand-built with no CSS framework:
-
-- **Motion** — count-up statistics, an animating SVG progress ring,
-  staggered card entrances, hover lift, ripple feedback on buttons, drifting
-  gradient backdrops, and animated SVG hero illustrations on the auth pages.
-  All of it collapses gracefully under `prefers-reduced-motion`, and values
-  render instantly rather than sitting at zero when a tab is in the
-  background.
-- **Responsive** — a three-stage layout: full sidebar on desktop, an icon
-  rail on laptops, and a slide-in drawer with a scrim on tablets and phones.
-  Data tables reflow into stacked cards below 860px, the Kanban scroll-snaps
-  horizontally, and modals become bottom sheets on small screens.
-- **Theming** — light and dark palettes driven entirely by CSS custom
-  properties, with the choice persisted to `localStorage`.
-- **Generated imagery** — inline SVG illustrations for the hero and empty
-  states, plus deterministic gradient avatars derived from each person's
-  name. No external image or font requests, so it works fully offline.
-
-## Security notes
-
-- Passwords hashed with Werkzeug's `scrypt`, never persisted in plain text.
-- Sessions are signed, `httpOnly` cookies; set `FLASK_ENV=production` to also
-  mark them `secure` (requires HTTPS).
-- All mutating endpoints require an authenticated session; employee and
-  department writes additionally require the `admin` or `manager` role, and
-  only an `admin` can grant `manager`/`admin` access.
+**Live demo → [https://taskforge-production.up.railway.app](https://taskforge-production.up.railway.app)**
 
 ---
 
-Built by **Ayush Yadav** as a task management project — inspired by the
-core feature set of [Lakshya-Sahu47/Task-Management](https://github.com/Lakshya-Sahu47/Task-Management),
-reimagined with a new UI on the same Flask + MySQL + vanilla JS foundation.
+## Features
+
+### Role-Based Access (Admin / Manager / Employee)
+
+| Capability | Admin | Manager | Employee |
+|---|:---:|:---:|:---:|
+| Create / delete tasks | ✓ | ✓ | |
+| Assign tasks to employees | ✓ | ✓ | |
+| Manage departments | ✓ | | |
+| Create manager / admin accounts | ✓ | | |
+| Create employee accounts | ✓ | ✓ | |
+| Self-register (always as employee) | ✓ | ✓ | ✓ |
+| Update own task status & progress | ✓ | ✓ | ✓ |
+| View full activity audit log | ✓ | | |
+
+### UI & Animations
+
+- **Drag-and-drop Kanban** — drag cards between status columns; status update hits MySQL in real time
+- **Confetti burst** — Web Animations API particle explosion fires every time a task reaches Completed
+- **3D tilt + spotlight** — stat and task cards tilt toward the cursor with a following light gradient using CSS custom properties
+- **Liquid nav indicator** — sidebar active-state marker slides smoothly between items via `translateY()`
+- **Skeleton loaders** — shimmer placeholders appear instantly before data arrives
+- **Hero parallax** — login/signup SVG illustrations tilt with mouse movement
+- **Custom confirm dialogs** — branded modal replaces all native `window.confirm()` calls
+- **Animated counters** — stat values count up from 0 on load (bypasses `requestAnimationFrame` in hidden tabs)
+- **SVG progress ring** — animated arc shows average task completion percentage
+- **Dark / light theme** — persisted in `localStorage`, toggleable from the nav bar
+- **Ripple buttons** — Material-style ink ripple on every click
+- **3-stage responsive layout** — full sidebar (>1080 px) → icon rail (820–1080 px) → mobile drawer (<820 px)
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.10, Flask 3.0, Flask-SQLAlchemy 3.1 |
+| Database | MySQL 8+ (PyMySQL driver) |
+| Auth | Werkzeug `scrypt` hashing, Flask signed session cookies |
+| Frontend | Vanilla JS ES2022, HTML5 Drag & Drop API, Web Animations API |
+| Styles | CSS custom properties, Grid, Flexbox — zero frameworks |
+| Production | Gunicorn 21 WSGI server, Railway (PaaS) |
+
+---
+
+## Demo Credentials
+
+| Role | Username | Password |
+|---|---|---|
+| Admin | `ayush.yadav` | `Ayush@123` |
+| Manager | `priya.mehta` | `Manager@123` |
+| Employee | `aarav.sharma` | `Employee@123` |
+| Employee | `rohan.patel` | `Employee@123` |
+| Employee | `ananya.iyer` | `Employee@123` |
+| Employee | `kabir.singh` | `Employee@123` |
+
+---
+
+## Local Setup
+
+### Prerequisites
+- Python 3.10+
+- MySQL 8+ running locally
+
+### 1. Clone
+
+```bash
+git clone https://github.com/ayushYadav1107/TaskForge.git
+cd TaskForge
+```
+
+### 2. Bootstrap (Windows one-shot)
+
+```bat
+setup_project.bat
+```
+
+This creates `backend/venv`, installs all dependencies, and copies `.env.example → backend/.env`.
+
+### 3. Configure the database
+
+Edit `backend/.env`:
+
+```env
+SECRET_KEY=any-random-string
+FLASK_ENV=development
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=taskforge
+```
+
+Create the database in MySQL:
+
+```sql
+CREATE DATABASE taskforge CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### 4. Initialise tables & seed demo data
+
+```bash
+cd backend
+venv\Scripts\activate        # macOS/Linux: source venv/bin/activate
+flask --app task_management init-db
+flask --app task_management seed
+```
+
+### 5. Start
+
+```bash
+python run.py
+```
+
+Open [http://localhost:5000](http://localhost:5000) and sign in with any demo account above.
+
+---
+
+## Project Structure
+
+```
+TaskForge/
+├── backend/
+│   ├── task_management/
+│   │   ├── models/          # SQLAlchemy models (User, Employee, Task, …)
+│   │   ├── routes/          # Flask blueprints (auth, task, employee, …)
+│   │   ├── services/        # Business logic + validation
+│   │   ├── auth_decorators.py
+│   │   ├── config.py        # Env-based configuration
+│   │   ├── extensions.py    # db = SQLAlchemy()
+│   │   ├── seed.py          # Sample data seeder
+│   │   └── __init__.py      # App factory (create_app)
+│   ├── requirements.txt
+│   ├── run.py               # Dev entrypoint
+│   └── .env.example
+├── frontend/
+│   ├── css/style.css        # ~1100 lines — design system, themes, animations
+│   ├── js/
+│   │   ├── api.js           # Shared helpers (fetch, tilt, confetti, drag-drop, …)
+│   │   ├── admin.js         # Admin/manager dashboard
+│   │   ├── employee.js      # Employee workspace
+│   │   ├── login.js
+│   │   └── signup.js
+│   ├── index.html           # Login
+│   ├── signup.html
+│   ├── admin.html
+│   └── employee.html
+├── database/
+│   └── schema.sql           # Full MySQL DDL (reviewable independently of the ORM)
+├── start.sh                 # Production entrypoint: init-db → gunicorn
+├── railway.toml             # Railway build & deploy config
+├── nixpacks.toml            # Nixpacks build instructions
+└── setup_project.bat        # Windows bootstrap
+```
+
+---
+
+## Deployment (Railway)
+
+Railway is the recommended host — it provides MySQL and Python in one click.
+
+### Steps
+
+1. Push this repo to GitHub (already done if you cloned it).
+2. Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → select `TaskForge`.
+3. Add a **MySQL** plugin from the service dashboard (Railway auto-sets `DATABASE_URL`).
+4. Add these environment variables in the service **Variables** tab:
+
+   | Variable | Value |
+   |---|---|
+   | `SECRET_KEY` | any long random string |
+   | `FLASK_ENV` | `production` |
+
+5. Click **Deploy**. Railway runs `start.sh` which calls `flask init-db` (idempotent) then starts Gunicorn on the assigned `$PORT`.
+6. To seed demo data, open the Railway shell and run:
+   ```bash
+   cd backend && flask --app task_management seed
+   ```
+
+---
+
+## API Reference
+
+| Method | Path | Auth required | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | — | Sign in |
+| `POST` | `/api/auth/register` | — | Self-signup (employee role only) |
+| `GET` | `/api/auth/me` | session | Current user info |
+| `POST` | `/api/auth/logout` | session | Sign out |
+| `GET` | `/api/tasks` | admin/manager | List all tasks |
+| `POST` | `/api/tasks` | admin/manager | Create task |
+| `PUT` | `/api/tasks/:id` | admin/manager | Edit task |
+| `DELETE` | `/api/tasks/:id` | admin/manager | Soft-delete task |
+| `GET` | `/api/employees` | admin/manager | List employees |
+| `POST` | `/api/employees` | admin/manager | Create employee (+optional user) |
+| `GET` | `/api/assignments/employee/:id` | session | Employee's assignments |
+| `POST` | `/api/assignments` | admin/manager | Assign task to employee |
+| `PUT` | `/api/assignments/:id/status` | session | Update status / progress |
+| `DELETE` | `/api/assignments/:id` | admin/manager | Unassign |
+| `GET` | `/api/dashboard/stats` | session | Aggregate stats |
+| `GET` | `/api/activity` | admin | Activity audit log |
+| `GET` | `/api/departments` | session | Department list |
+
+---
+
+## Security
+
+- Passwords hashed with Werkzeug `scrypt` — never stored in plain text
+- `SESSION_COOKIE_HTTPONLY=True`; `SESSION_COOKIE_SECURE=True` when `FLASK_ENV=production`
+- Manager/admin account creation enforced at **both** the JS layer (hidden UI) and server layer (returns `403` for unauthorised role requests)
+- Self-signup always produces `role=employee` regardless of the posted payload
+- `backend/.env` is gitignored — credentials are never committed
+
+---
+
+## Data Model
+
+| Table | Purpose |
+|---|---|
+| `users` | Login accounts with role (`admin` / `manager` / `employee`) |
+| `departments` | Org department master list |
+| `employees` | HR profile, linked 1:1 to a user account |
+| `tasks` | Task definitions (title, priority, estimated hours, notes) |
+| `task_assignments` | Junction: which employee does which task, status, completion % |
+| `activity_logs` | Audit trail — before/after JSON snapshots |
+
+---
+
+## License
+
+MIT © 2025 [Ayush Yadav](https://github.com/ayushYadav1107)

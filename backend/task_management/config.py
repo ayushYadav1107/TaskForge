@@ -21,7 +21,10 @@ class Config:
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
     DB_NAME = os.environ.get("DB_NAME", "taskforge")
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or (
+    _raw_url = os.environ.get("DATABASE_URL")
+    if _raw_url and _raw_url.startswith("mysql://"):
+        _raw_url = "mysql+pymysql://" + _raw_url[len("mysql://"):]
+    SQLALCHEMY_DATABASE_URI = _raw_url or (
         f"mysql+pymysql://{quote_plus(DB_USER)}:{quote_plus(DB_PASSWORD)}"
         f"@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
     )
