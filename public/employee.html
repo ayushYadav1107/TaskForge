@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskForge — My Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-mark">
+        <span class="logo-dot">TF</span>
+        <span class="label">TaskForge</span>
+      </div>
+
+      <button class="nav-item active" data-section="my-tasks">🗂️ <span class="label">My Tasks</span></button>
+      <button class="nav-item" data-section="profile">🙋 <span class="label">Profile</span></button>
+
+      <div class="sidebar-footer">
+        <button class="nav-item" id="theme-toggle">🌓 <span class="label">Toggle theme</span></button>
+        <button class="nav-item" id="logout-btn">🚪 <span class="label">Log out</span></button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1 id="page-title">My Tasks</h1>
+          <div class="sub" id="page-sub">Everything currently on your plate.</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="avatar" id="user-avatar">--</div>
+        </div>
+      </div>
+
+      <!-- MY TASKS -->
+      <section class="section active" id="section-my-tasks">
+        <div class="stat-grid" id="stat-grid"></div>
+        <div class="card">
+          <div class="card-header"><h2>Assigned tasks</h2></div>
+          <div class="kanban" id="my-kanban"></div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="section" id="section-profile">
+        <div class="card" id="profile-card"></div>
+
+        <div class="card">
+          <div class="card-header"><h2>Change password</h2></div>
+          <form id="password-form" style="max-width:360px;">
+            <div class="field">
+              <label for="old-password">Current password</label>
+              <input id="old-password" type="password" required />
+            </div>
+            <div class="field">
+              <label for="new-password">New password</label>
+              <input id="new-password" type="password" required minlength="6" />
+            </div>
+            <button type="submit" class="btn btn-primary">Update password</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Assignment update modal -->
+  <div class="modal-overlay" id="assignment-modal" hidden>
+    <div class="modal">
+      <h2 id="assignment-modal-title">Task</h2>
+      <p class="modal-sub" id="assignment-modal-sub"></p>
+      <form id="assignment-form">
+        <input type="hidden" id="assignment-id" />
+        <div class="field">
+          <label for="assignment-status">Status</label>
+          <select id="assignment-status">
+            <option>Pending</option>
+            <option>In Progress</option>
+            <option>Completed</option>
+            <option>On Hold</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Completion</label>
+          <div class="progress-input-row">
+            <input type="range" id="assignment-progress" min="0" max="100" step="5" />
+            <span class="progress-value" id="assignment-progress-value">0%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="assignment-remarks">Remarks</label>
+          <textarea id="assignment-remarks" placeholder="Notes for your manager..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-modal="assignment-modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/employee.js"></script>
+</body>
+</html>
