@@ -1,5 +1,6 @@
 applySavedTheme();
 attachRipples(document);
+attachHeroParallax();
 
 (async function redirectIfSignedIn() {
   try {

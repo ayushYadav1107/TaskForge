@@ -191,7 +191,7 @@ function renderTasksKanban() {
     const cards = items
       .map(
         (a, i) => `
-        <div class="task-card card-accent-${a.task_priority}" style="--i:${i}" data-open-assignment="${a.id}">
+        <div class="task-card card-accent-${a.task_priority}" style="--i:${i}" data-open-assignment="${a.id}" data-drag-id="${a.id}">
           <div class="title">${escapeHtml(a.task_title)}</div>
           <div class="meta">
             <span>${escapeHtml(employeeName(a.employee_id))}</span>
@@ -202,20 +202,51 @@ function renderTasksKanban() {
       )
       .join("");
     columns.push(`
-      <div class="kanban-col">
+      <div class="kanban-col" data-drop-status="${status}">
         <h3>${status} <span class="count">${items.length}</span></h3>
         ${cards || `<div class="kanban-empty">No tasks</div>`}
       </div>`);
   }
 
-  document.getElementById("tasks-kanban").innerHTML = columns.join("");
+  const kanbanEl = document.getElementById("tasks-kanban");
+  kanbanEl.innerHTML = columns.join("");
 
-  document.querySelectorAll("[data-open-assignment]").forEach((el) => {
-    el.addEventListener("click", () => openAssignmentModal(Number(el.dataset.openAssignment)));
+  kanbanEl.querySelectorAll("[data-open-assignment]").forEach((el) => {
+    // Dragging fires its own click at drop time in some browsers — ignore
+    // clicks that immediately follow a drag so the modal doesn't pop open.
+    el.addEventListener("click", () => {
+      if (el.dataset.justDragged) return;
+      openAssignmentModal(Number(el.dataset.openAssignment));
+    });
   });
-  document.querySelectorAll("[data-open-assign]").forEach((el) => {
+  kanbanEl.querySelectorAll("[data-open-assign]").forEach((el) => {
     el.addEventListener("click", () => openAssignModal(Number(el.dataset.openAssign)));
   });
+
+  enableKanbanDragDrop(kanbanEl, (assignmentId, newStatus, colEl) =>
+    handleAssignmentDrop(assignmentId, newStatus, colEl)
+  );
+}
+
+async function handleAssignmentDrop(assignmentId, newStatus, colEl) {
+  const assignment = state.assignments.find((a) => a.id === Number(assignmentId));
+  if (!assignment || assignment.status === newStatus) return;
+
+  const card = document.querySelector(`[data-drag-id="${assignmentId}"]`);
+  if (card) card.dataset.justDragged = "1";
+  setTimeout(() => {
+    if (card) delete card.dataset.justDragged;
+  }, 300);
+
+  try {
+    await Api.put(`/api/assignments/${assignmentId}/status`, { status: newStatus });
+    toast(`Moved to ${newStatus}`, "success");
+    if (newStatus === "Completed") burstConfetti(colEl);
+    await refreshData();
+    renderTasks();
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 function renderTasksTable() {
@@ -319,7 +350,11 @@ document.getElementById("task-form").addEventListener("submit", async (e) => {
 });
 
 async function deleteTask(id) {
-  if (!confirm("Delete this task and all of its assignments?")) return;
+  const ok = await confirmDialog("Delete this task and all of its assignments? This can't be undone.", {
+    title: "Delete task",
+    confirmLabel: "Delete task",
+  });
+  if (!ok) return;
   try {
     await Api.del(`/api/tasks/${id}`);
     toast("Task deleted", "success");
@@ -379,14 +414,17 @@ document.getElementById("assignment-progress").addEventListener("input", (e) => 
 document.getElementById("assignment-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = document.getElementById("assignment-id").value;
+  const newStatus = document.getElementById("assignment-status").value;
+  const wasCompleted = state.assignments.find((a) => a.id === Number(id))?.status === "Completed";
   try {
     await Api.put(`/api/assignments/${id}/status`, {
-      status: document.getElementById("assignment-status").value,
+      status: newStatus,
       completion_percentage: Number(document.getElementById("assignment-progress").value),
       remarks: document.getElementById("assignment-remarks").value,
     });
     toast("Assignment updated", "success");
     closeModal("assignment-modal");
+    if (newStatus === "Completed" && !wasCompleted) burstConfetti(null);
     await refreshData();
     renderTasks();
   } catch (err) {
@@ -396,7 +434,11 @@ document.getElementById("assignment-form").addEventListener("submit", async (e) 
 
 document.getElementById("unassign-btn").addEventListener("click", async () => {
   const id = document.getElementById("assignment-id").value;
-  if (!confirm("Remove this assignment?")) return;
+  const ok = await confirmDialog("Remove this assignment? The employee will no longer see this task.", {
+    title: "Remove assignment",
+    confirmLabel: "Remove",
+  });
+  if (!ok) return;
   try {
     await Api.del(`/api/assignments/${id}`);
     toast("Assignment removed", "success");
@@ -529,7 +571,11 @@ document.getElementById("employee-form").addEventListener("submit", async (e) =>
 });
 
 async function deleteEmployee(id) {
-  if (!confirm("Remove this employee? Their login will be deactivated.")) return;
+  const ok = await confirmDialog("Their login will be deactivated and they'll no longer be able to sign in.", {
+    title: "Remove employee",
+    confirmLabel: "Remove employee",
+  });
+  if (!ok) return;
   try {
     await Api.del(`/api/employees/${id}`);
     toast("Employee removed", "success");
@@ -590,14 +636,42 @@ async function renderActivity() {
 
 /* ---------------- Navigation ---------------- */
 
+function showSectionSkeleton(name) {
+  if (name === "tasks") {
+    document.getElementById("tasks-kanban").innerHTML = skeletonKanban(6);
+  } else if (name === "employees") {
+    document.getElementById("employees-table-body").innerHTML = skeletonRows(4);
+  } else if (name === "departments") {
+    document.getElementById("departments-grid").innerHTML = Array.from({ length: 4 })
+      .map(
+        () => `
+        <div class="stat-card">
+          <div class="dept-card">
+            <div class="skeleton skeleton-avatar" style="width:44px; height:44px; border-radius:13px;"></div>
+            <div style="flex:1;">
+              <div class="skeleton skeleton-line" style="width:60%;"></div>
+              <div class="skeleton skeleton-line" style="width:30%; height:20px;"></div>
+            </div>
+          </div>
+        </div>`
+      )
+      .join("");
+  } else if (name === "activity") {
+    document.getElementById("activity-log").innerHTML = skeletonList(6);
+  }
+}
+
 async function showSection(name) {
   document.querySelectorAll(".nav-item[data-section]").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.section === name);
   });
+  updateNavIndicator();
   document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
   document.getElementById(`section-${name}`).classList.add("active");
   document.getElementById("page-title").textContent = PAGE_META[name][0];
   document.getElementById("page-sub").textContent = PAGE_META[name][1];
+
+  showSectionSkeleton(name);
 
   await refreshData();
   if (name === "overview") await renderOverview();

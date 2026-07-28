@@ -83,7 +83,7 @@ function renderKanban() {
     const cards = items
       .map(
         (a, i) => `
-        <div class="task-card card-accent-${a.task_priority}" style="--i:${i}" data-open="${a.id}">
+        <div class="task-card card-accent-${a.task_priority}" style="--i:${i}" data-open="${a.id}" data-drag-id="${a.id}">
           <div class="title">${escapeHtml(a.task_title)}</div>
           <div class="meta">
             <span class="text-muted">${a.task_estimated_hours ? `${a.task_estimated_hours}h est.` : "No estimate"}</span>
@@ -94,15 +94,44 @@ function renderKanban() {
       )
       .join("");
     return `
-      <div class="kanban-col">
+      <div class="kanban-col" data-drop-status="${status}">
         <h3>${status} <span class="count">${items.length}</span></h3>
         ${cards || `<div class="kanban-empty">Nothing here</div>`}
       </div>`;
   }).join("");
 
   container.querySelectorAll("[data-open]").forEach((el) => {
-    el.addEventListener("click", () => openAssignmentModal(Number(el.dataset.open)));
+    el.addEventListener("click", () => {
+      if (el.dataset.justDragged) return;
+      openAssignmentModal(Number(el.dataset.open));
+    });
   });
+
+  enableKanbanDragDrop(container, (assignmentId, newStatus, colEl) =>
+    handleAssignmentDrop(assignmentId, newStatus, colEl)
+  );
+}
+
+async function handleAssignmentDrop(assignmentId, newStatus, colEl) {
+  const assignment = state.assignments.find((a) => a.id === Number(assignmentId));
+  if (!assignment || assignment.status === newStatus) return;
+
+  const card = document.querySelector(`[data-drag-id="${assignmentId}"]`);
+  if (card) card.dataset.justDragged = "1";
+  setTimeout(() => {
+    if (card) delete card.dataset.justDragged;
+  }, 300);
+
+  try {
+    await Api.put(`/api/assignments/${assignmentId}/status`, { status: newStatus });
+    toast(`Moved to ${newStatus}`, "success");
+    if (newStatus === "Completed") burstConfetti(colEl);
+    await loadAssignments();
+    renderStats();
+    renderKanban();
+  } catch (err) {
+    toast(err.message, "error");
+  }
 }
 
 function openAssignmentModal(id) {
@@ -125,14 +154,17 @@ document.getElementById("assignment-progress").addEventListener("input", (e) => 
 document.getElementById("assignment-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = document.getElementById("assignment-id").value;
+  const newStatus = document.getElementById("assignment-status").value;
+  const wasCompleted = state.assignments.find((a) => a.id === Number(id))?.status === "Completed";
   try {
     await Api.put(`/api/assignments/${id}/status`, {
-      status: document.getElementById("assignment-status").value,
+      status: newStatus,
       completion_percentage: Number(document.getElementById("assignment-progress").value),
       remarks: document.getElementById("assignment-remarks").value,
     });
     toast("Task updated", "success");
     closeModal("assignment-modal");
+    if (newStatus === "Completed" && !wasCompleted) burstConfetti(null);
     await loadAssignments();
     renderStats();
     renderKanban();
@@ -180,6 +212,7 @@ document.querySelectorAll(".nav-item[data-section]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const name = btn.dataset.section;
     document.querySelectorAll(".nav-item[data-section]").forEach((b) => b.classList.toggle("active", b === btn));
+    updateNavIndicator();
     document.querySelectorAll(".section").forEach((sec) => sec.classList.remove("active"));
     document.getElementById(`section-${name}`).classList.add("active");
     document.getElementById("page-title").textContent = PAGE_META[name][0];

@@ -163,10 +163,16 @@ button, input, select, textarea { font-family: inherit; }
 
 @keyframes growWidth { from { width: 0 !important; } }
 
-/* Entrance helper: set --i on the element to stagger it. */
+/* Entrance helper: set --i on the element to stagger it.
+   Uses fill-mode "backwards" (not "forwards") deliberately: once the
+   animation finishes, the element's transform/opacity fall back to its
+   normal (non-animation) declared values instead of staying pinned to the
+   animation's last keyframe — which would otherwise sit at a higher
+   cascade priority than :hover and permanently block any hover transform
+   on the same property. */
 .animate-in {
-  opacity: 0;
-  animation: fadeUp 0.5s var(--ease-out) forwards;
+  opacity: 1;
+  animation: fadeUp 0.5s var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 
@@ -586,14 +592,18 @@ input[type="range"]::-moz-range-thumb {
 
 .stat-card {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px 20px;
   box-shadow: var(--shadow-sm);
+  --sc-lift: 0px;
+  transform: perspective(800px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) translateY(var(--sc-lift));
   transition: transform 0.28s var(--ease-out), box-shadow 0.28s, border-color 0.28s;
 }
+.stat-card.tilt-active { transition: box-shadow 0.28s, border-color 0.28s, transform 0.08s linear; }
 .stat-card::after {
   content: "";
   position: absolute;
@@ -604,7 +614,21 @@ input[type="range"]::-moz-range-thumb {
   opacity: 0.5;
   transition: transform 0.4s var(--ease-out);
 }
-.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--border-strong); }
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.5), transparent 60%);
+  transition: opacity 0.25s;
+}
+[data-theme="dark"] .stat-card::before {
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.08), transparent 60%);
+}
+.stat-card.tilt-active::before { opacity: 1; }
+.stat-card:hover { --sc-lift: -4px; box-shadow: var(--shadow); border-color: var(--border-strong); }
 .stat-card:hover::after { transform: scale(1.25); }
 .stat-card > * { position: relative; z-index: 1; }
 
@@ -781,6 +805,8 @@ td .cell-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 }
 
 .task-card {
+  position: relative;
+  isolation: isolate;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--card-accent, var(--border-strong));
@@ -789,12 +815,30 @@ td .cell-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   margin-bottom: 10px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  opacity: 0;
-  animation: fadeUp 0.45s var(--ease-out) forwards;
+  opacity: 1;
+  --tc-lift: 0px;
+  --tc-scale: 1;
+  transform: perspective(800px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) translateY(var(--tc-lift)) scale(var(--tc-scale));
+  animation: fadeUp 0.45s var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 45ms);
   transition: transform 0.22s var(--ease-out), box-shadow 0.22s, border-color 0.22s;
 }
-.task-card:hover { transform: translateY(-3px) scale(1.015); box-shadow: var(--shadow); }
+.task-card.tilt-active { transition: box-shadow 0.22s, border-color 0.22s, transform 0.08s linear; }
+.task-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(180px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.5), transparent 60%);
+  transition: opacity 0.25s;
+}
+[data-theme="dark"] .task-card::before {
+  background: radial-gradient(180px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.08), transparent 60%);
+}
+.task-card.tilt-active::before { opacity: 1; }
+.task-card:hover { --tc-lift: -3px; --tc-scale: 1.015; box-shadow: var(--shadow); }
 .task-card:last-child { margin-bottom: 0; }
 .task-card .title { font-weight: 680; font-size: 13.5px; margin-bottom: 8px; line-height: 1.4; }
 .task-card .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
@@ -945,6 +989,132 @@ td .cell-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   display: grid; place-items: center; font-size: 18px; color: #fff;
 }
 
+/* ==========================================================================
+   Kanban drag & drop
+   ========================================================================== */
+
+.task-card[draggable="true"] { cursor: grab; }
+.task-card.dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+  --tc-scale: 0.96;
+  --tc-lift: 0px;
+  box-shadow: none;
+}
+.task-card.drop-pulse { animation: dropPulse 0.5s var(--ease-out); }
+@keyframes dropPulse {
+  0%   { box-shadow: 0 0 0 0 var(--primary); }
+  60%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: var(--shadow-sm) 0 0 0 0; }
+}
+
+.kanban-col.drag-over {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 2px var(--primary);
+  transform: scale(1.015);
+}
+.kanban-col {
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s var(--ease-out);
+}
+.kanban-col.drag-invalid {
+  animation: shakeNo 0.4s var(--ease-out);
+}
+@keyframes shakeNo {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.kanban-hint {
+  font-size: 11px; color: var(--text-muted); text-align: center;
+  margin: -6px 0 12px; opacity: 0.75;
+}
+
+/* ==========================================================================
+   Sidebar liquid active indicator
+   ========================================================================== */
+
+.nav-item.active::before { content: none; }
+.nav-indicator {
+  position: absolute;
+  left: 0; width: 3px; height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  transition: transform 0.4s var(--ease-spring), height 0.3s var(--ease-out), opacity 0.2s;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-indicator.visible { opacity: 1; }
+
+/* ==========================================================================
+   Confirm dialog
+   ========================================================================== */
+
+.confirm-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 22px; font-weight: 800;
+  margin-bottom: 16px;
+  background: var(--danger-soft); color: var(--danger);
+  animation: confirmPop 0.4s var(--ease-spring);
+}
+.confirm-icon.confirm-icon--neutral { background: var(--primary-soft); color: var(--primary-dark); }
+@keyframes confirmPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================================================
+   Confetti
+   ========================================================================== */
+
+.confetti-piece {
+  position: fixed;
+  top: 0; left: 0;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 300;
+  will-change: transform, opacity;
+}
+
+/* ==========================================================================
+   Button loading state
+   ========================================================================== */
+
+.btn-loading { color: transparent !important; pointer-events: none; }
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+.btn-ghost.btn-loading::after, .btn-danger.btn-loading::after {
+  border-color: var(--primary-soft);
+  border-top-color: var(--primary);
+}
+
+/* ==========================================================================
+   Skeleton loading placeholders
+   ========================================================================== */
+
+.skeleton-line { height: 12px; margin-bottom: 8px; }
+.skeleton-line:last-child { margin-bottom: 0; }
+.skeleton-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(232px, 1fr);
+  gap: 14px;
+  padding: 4px 4px 12px;
+}
+.skeleton-kanban .kanban-col { display: flex; flex-direction: column; gap: 10px; }
+
+/* Hero parallax (auth pages) */
+.brand-hero svg { transition: transform 0.25s var(--ease-out); will-change: transform; }
+
 /* ---------- Reduced motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -955,4 +1125,7 @@ td .cell-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     scroll-behavior: auto !important;
   }
   .animate-in, .task-card, .activity-item { opacity: 1; }
+  .stat-card, .task-card { transform: none !important; }
+  .stat-card::before, .task-card::before { display: none; }
+  .brand-hero svg { transform: none !important; }
 }

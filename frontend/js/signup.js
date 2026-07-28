@@ -1,5 +1,6 @@
 applySavedTheme();
 attachRipples(document);
+attachHeroParallax();
 
 const form = document.getElementById("signup-form");
 const errorBox = document.getElementById("form-error");
