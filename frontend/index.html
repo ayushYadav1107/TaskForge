@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskForge — Sign in</title>
+  <meta name="description" content="TaskForge — task and workforce management by Ayush Yadav" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <section class="auth-brand">
+      <div class="brand-mark">
+        <span class="logo-dot">TF</span>
+        <span class="brand-word">TaskForge</span>
+      </div>
+
+      <div>
+        <h1>Assign work.<br />Track progress.<br />Ship on time.</h1>
+        <p class="lede">
+          A lightweight task &amp; workforce platform — manage departments,
+          employees and tasks, then watch completion move in real time.
+        </p>
+
+        <div class="brand-hero">
+          <svg viewBox="0 0 420 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a task board">
+            <defs>
+              <linearGradient id="cardFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity=".78"/>
+              </linearGradient>
+              <linearGradient id="barFill" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#14b8a6"/>
+                <stop offset="100%" stop-color="#5eead4"/>
+              </linearGradient>
+            </defs>
+
+            <!-- orbit ring -->
+            <g class="hero-ring">
+              <circle cx="210" cy="130" r="112" fill="none" stroke="#ffffff" stroke-opacity=".18"
+                      stroke-width="1.5" stroke-dasharray="5 11"/>
+              <circle cx="210" cy="18" r="5" fill="#5eead4"/>
+              <circle cx="322" cy="130" r="4" fill="#ffffff" opacity=".7"/>
+            </g>
+
+            <!-- back column -->
+            <rect x="42" y="58" width="112" height="150" rx="14" fill="#ffffff" opacity=".12"/>
+            <rect x="266" y="58" width="112" height="150" rx="14" fill="#ffffff" opacity=".12"/>
+
+            <!-- card A -->
+            <g class="hero-card">
+              <rect x="54" y="74" width="88" height="56" rx="10" fill="url(#cardFill)"/>
+              <rect x="64" y="86" width="46" height="6" rx="3" fill="#5540e6" opacity=".55"/>
+              <rect x="64" y="100" width="62" height="5" rx="2.5" fill="#171a29" opacity=".18"/>
+              <rect x="64" y="112" width="30" height="8" rx="4" fill="#f59e0b" opacity=".45"/>
+            </g>
+
+            <!-- card B -->
+            <g class="hero-card hero-card--b">
+              <rect x="54" y="140" width="88" height="52" rx="10" fill="url(#cardFill)"/>
+              <rect x="64" y="152" width="52" height="6" rx="3" fill="#5540e6" opacity=".55"/>
+              <rect x="64" y="166" width="40" height="5" rx="2.5" fill="#171a29" opacity=".18"/>
+              <rect x="64" y="178" width="26" height="6" rx="3" fill="#ef4444" opacity=".45"/>
+            </g>
+
+            <!-- centre progress panel -->
+            <g class="hero-card hero-card--c">
+              <rect x="150" y="86" width="120" height="108" rx="14" fill="url(#cardFill)"/>
+              <rect x="164" y="102" width="64" height="7" rx="3.5" fill="#5540e6" opacity=".6"/>
+
+              <rect x="164" y="122" width="92" height="7" rx="3.5" fill="#171a29" opacity=".10"/>
+              <rect class="hero-bar" x="164" y="122" width="74" height="7" rx="3.5" fill="url(#barFill)"/>
+
+              <rect x="164" y="140" width="92" height="7" rx="3.5" fill="#171a29" opacity=".10"/>
+              <rect class="hero-bar hero-bar--b" x="164" y="140" width="50" height="7" rx="3.5" fill="url(#barFill)"/>
+
+              <rect x="164" y="158" width="92" height="7" rx="3.5" fill="#171a29" opacity=".10"/>
+              <rect class="hero-bar hero-bar--c" x="164" y="158" width="86" height="7" rx="3.5" fill="url(#barFill)"/>
+
+              <g class="hero-tick">
+                <circle cx="248" cy="180" r="13" fill="#22c55e" opacity=".92"/>
+                <path d="M242 180l4.5 4.5 8-8.5" stroke="#fff" stroke-width="2.4"
+                      stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </g>
+            </g>
+
+            <!-- card C (right) -->
+            <g class="hero-card hero-card--b">
+              <rect x="278" y="74" width="88" height="60" rx="10" fill="url(#cardFill)"/>
+              <circle cx="294" cy="92" r="8" fill="#6d5ef8" opacity=".5"/>
+              <rect x="308" y="88" width="44" height="6" rx="3" fill="#171a29" opacity=".2"/>
+              <rect x="290" y="108" width="62" height="5" rx="2.5" fill="#171a29" opacity=".14"/>
+              <rect x="290" y="119" width="40" height="5" rx="2.5" fill="#171a29" opacity=".14"/>
+            </g>
+
+            <g class="hero-card">
+              <rect x="278" y="144" width="88" height="48" rx="10" fill="url(#cardFill)"/>
+              <rect x="290" y="156" width="50" height="6" rx="3" fill="#14b8a6" opacity=".6"/>
+              <rect x="290" y="170" width="64" height="5" rx="2.5" fill="#171a29" opacity=".16"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="brand-stats">
+          <div><div class="s-value">5</div><div class="s-label">Task states</div></div>
+          <div><div class="s-value">3</div><div class="s-label">Access roles</div></div>
+          <div><div class="s-value">100%</div><div class="s-label">Audit logged</div></div>
+        </div>
+      </div>
+
+      <div class="credit">Designed &amp; built by <strong>Ayush Yadav</strong></div>
+    </section>
+
+    <section class="auth-form-side">
+      <div class="auth-card">
+        <div class="auth-mobile-head">
+          <span class="logo-dot">TF</span>
+          <span>TaskForge</span>
+        </div>
+
+        <h2>Welcome back</h2>
+        <p class="sub">Sign in to your TaskForge workspace</p>
+
+        <div id="form-error" class="field-error" style="display:none;"></div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="username">Username</label>
+            <input id="username" name="username" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="login-btn">Sign in</button>
+        </form>
+
+        <p class="auth-alt">New here? <a href="/signup">Create an account</a></p>
+
+        <div class="demo-creds">
+          <strong>Demo accounts</strong>
+          Admin — <code>ayush.yadav</code> / <code>Ayush@123</code><br />
+          Manager — <code>priya.mehta</code> / <code>Manager@123</code><br />
+          Employee — <code>aarav.sharma</code> / <code>Employee@123</code>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>

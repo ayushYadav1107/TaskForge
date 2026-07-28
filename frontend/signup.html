@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskForge — Create account</title>
+  <meta name="description" content="Join a TaskForge workspace — built by Ayush Yadav" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <section class="auth-brand">
+      <div class="brand-mark">
+        <span class="logo-dot">TF</span>
+        <span class="brand-word">TaskForge</span>
+      </div>
+
+      <div>
+        <h1>Join your team<br />in under a minute.</h1>
+        <p class="lede">
+          Create your employee account, pick your department, and your manager
+          can start assigning you work straight away.
+        </p>
+
+        <div class="brand-hero">
+          <svg viewBox="0 0 420 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of team members joining">
+            <defs>
+              <linearGradient id="cardFill2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity=".78"/>
+              </linearGradient>
+            </defs>
+
+            <g class="hero-ring">
+              <circle cx="210" cy="115" r="100" fill="none" stroke="#ffffff" stroke-opacity=".18"
+                      stroke-width="1.5" stroke-dasharray="5 11"/>
+              <circle cx="210" cy="15" r="5" fill="#5eead4"/>
+            </g>
+
+            <!-- team row -->
+            <g class="hero-card">
+              <rect x="86" y="74" width="76" height="86" rx="13" fill="url(#cardFill2)"/>
+              <circle cx="124" cy="102" r="16" fill="#6d5ef8" opacity=".55"/>
+              <rect x="104" y="128" width="40" height="6" rx="3" fill="#171a29" opacity=".2"/>
+              <rect x="110" y="142" width="28" height="5" rx="2.5" fill="#171a29" opacity=".13"/>
+            </g>
+
+            <g class="hero-card hero-card--b">
+              <rect x="172" y="58" width="76" height="86" rx="13" fill="url(#cardFill2)"/>
+              <circle cx="210" cy="86" r="16" fill="#14b8a6" opacity=".6"/>
+              <rect x="190" y="112" width="40" height="6" rx="3" fill="#171a29" opacity=".2"/>
+              <rect x="196" y="126" width="28" height="5" rx="2.5" fill="#171a29" opacity=".13"/>
+            </g>
+
+            <g class="hero-card hero-card--c">
+              <rect x="258" y="74" width="76" height="86" rx="13" fill="url(#cardFill2)"/>
+              <circle cx="296" cy="102" r="16" fill="#f59e0b" opacity=".55"/>
+              <rect x="276" y="128" width="40" height="6" rx="3" fill="#171a29" opacity=".2"/>
+              <rect x="282" y="142" width="28" height="5" rx="2.5" fill="#171a29" opacity=".13"/>
+            </g>
+
+            <!-- plus badge -->
+            <g class="hero-tick">
+              <circle cx="210" cy="178" r="19" fill="#22c55e" opacity=".92"/>
+              <path d="M202 178h16M210 170v16" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="credit">Designed &amp; built by <strong>Ayush Yadav</strong></div>
+    </section>
+
+    <section class="auth-form-side">
+      <div class="auth-card auth-card--wide">
+        <div class="auth-mobile-head">
+          <span class="logo-dot">TF</span>
+          <span>TaskForge</span>
+        </div>
+
+        <h2>Create your account</h2>
+        <p class="sub">Sign up as an employee — managers and admins are created by an administrator.</p>
+
+        <div id="form-error" class="field-error" style="display:none;"></div>
+
+        <form id="signup-form" novalidate>
+          <div class="form-row">
+            <div class="field">
+              <label for="first-name">First name</label>
+              <input id="first-name" autocomplete="given-name" required />
+            </div>
+            <div class="field">
+              <label for="last-name">Last name</label>
+              <input id="last-name" autocomplete="family-name" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" type="email" autocomplete="email" required />
+            </div>
+            <div class="field">
+              <label for="phone">Phone</label>
+              <input id="phone" autocomplete="tel" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label for="department">Department</label>
+              <select id="department" required></select>
+            </div>
+            <div class="field">
+              <label for="position">Role / position</label>
+              <input id="position" placeholder="e.g. Software Engineer" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label for="username">Username</label>
+              <input id="username" autocomplete="username" required />
+              <div class="hint">Letters, numbers, dot, dash or underscore.</div>
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <input id="password" type="password" autocomplete="new-password" required />
+              <div class="hint">At least 6 characters.</div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="signup-btn">Create account</button>
+        </form>
+
+        <p class="auth-alt">Already have an account? <a href="/">Sign in</a></p>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/signup.js"></script>
+</body>
+</html>
