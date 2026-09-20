@@ -51,7 +51,7 @@ def update_assignment_status(assignment_id, fields, actor_id):
         try:
             pct = int(fields["completion_percentage"])
         except (TypeError, ValueError):
-            raise AssignmentError("completion_percentage must be a whole number")
+            raise AssignmentError("completion_percentage must be a whole number") from None
         if pct < 0 or pct > 100:
             raise AssignmentError("completion_percentage must be between 0 and 100")
         assignment.completion_percentage = pct

@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 
 from conftest import PASSWORD, login
+
 from task_management.extensions import db
 from task_management.models import User
 

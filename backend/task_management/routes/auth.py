@@ -1,8 +1,8 @@
 from flask import Blueprint, g, jsonify, request, session
 
+from ..auth_decorators import login_required
 from ..services import auth_service, employee_service
 from ..services.errors import AuthError
-from ..auth_decorators import login_required
 
 auth_bp = Blueprint("auth", __name__)
 

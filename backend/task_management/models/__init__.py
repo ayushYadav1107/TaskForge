@@ -1,8 +1,8 @@
-from .user import User
+from .activity_log import ActivityLog
 from .department import Department
 from .employee import Employee
 from .task import Task
 from .task_assignment import TaskAssignment
-from .activity_log import ActivityLog
+from .user import User
 
 __all__ = ["User", "Department", "Employee", "Task", "TaskAssignment", "ActivityLog"]

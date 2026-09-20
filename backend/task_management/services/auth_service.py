@@ -100,7 +100,7 @@ def register_user(fields):
     except Exception as err:
         # Don't leave an orphaned login behind if the profile couldn't be created.
         db.session.rollback()
-        raise AuthError(getattr(err, "message", str(err)))
+        raise AuthError(getattr(err, "message", str(err))) from err
 
     log_activity(user.id, "REGISTER", "user", user.id)
     return user

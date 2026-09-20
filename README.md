@@ -1,246 +1,264 @@
-# TaskForge — Task Management System
+# TaskForge — Task & Workforce Management
 
-> Built by **Ayush Yadav** · Flask · MySQL · Vanilla JS
+> Full-stack, role-based task management. **React + TypeScript** front end, **Flask + SQLAlchemy** REST API, **PostgreSQL / MySQL / SQLite**, containerised and CI-tested.
 
-[![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
-[![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=white)](https://mysql.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/ayushYadav1107/TaskForge/actions/workflows/ci.yml/badge.svg)](https://github.com/ayushYadav1107/TaskForge/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://docker.com)
 
-TaskForge is a full-featured, role-based task management web application. Admins create tasks and assign them to employees, managers oversee their teams, and employees track and update their own work — all inside a polished UI with **drag-and-drop kanban boards**, **3D-tilt cards**, **confetti celebrations**, and real-time **skeleton loaders**.
-
-**Live demo → [https://taskforge-web-production-ebb9.up.railway.app](https://taskforge-web-production-ebb9.up.railway.app)**
+Admins and managers create work and assign it; employees track and update only
+their own. Every mutation is written to an append-only audit log with full
+before/after state.
 
 ---
 
-## Features
+## Architecture
 
-### Role-Based Access (Admin / Manager / Employee)
+```
+┌─────────────────────────────┐
+│  React 18 + TypeScript SPA  │   Vite · React Router · TanStack Query
+│  (web/)                     │
+└──────────────┬──────────────┘
+               │  same-origin fetch, session cookie + CSRF header
+┌──────────────▼──────────────┐
+│  Flask REST API             │   routes → services → models
+│  (backend/task_management/) │   no business logic in a route handler
+└──────────────┬──────────────┘
+               │  SQLAlchemy 2.0 ORM · Alembic migrations
+┌──────────────▼──────────────┐
+│  PostgreSQL / MySQL/ SQLite │
+└─────────────────────────────┘
+```
+
+The SPA and the API are served from **one origin**: in production Flask serves
+the compiled Vite bundle. That keeps the session cookie first-party, which
+means no CORS configuration and no access token sitting in `localStorage` for
+an XSS payload to steal.
+
+**Layering.** Route handlers parse the request, call a service, and shape the
+response — nothing else. All business rules live in `services/`, which is why
+the same validation applies whether a task is created through the API, the
+seed script, or the CLI.
+
+---
+
+## Security
+
+Cookie sessions are the right fit for a same-origin SPA, but they have to be
+built correctly. What that meant here:
+
+| Concern | Approach |
+|---|---|
+| Password storage | `scrypt` via Werkzeug — memory-hard, so GPU cracking is expensive |
+| Brute force | Lockout after 5 failures for 15 min, **counted on the user row** so the limit is shared across every worker and survives restarts |
+| Username enumeration | One generic error for every credential failure, plus a dummy hash on the miss path so a nonexistent user doesn't answer faster |
+| CSRF | Double-submit token: a readable cookie the SPA echoes in `X-CSRF-Token`, verified with `compare_digest`. Enforced only on authenticated mutations, so `curl`-ing the login endpoint still works |
+| Session fixation | The session is cleared and rebuilt at the login boundary |
+| Stale privileges | The role is re-read from the database each request, so a demotion binds immediately instead of waiting for the cookie to expire |
+| XSS | Strict CSP (`script-src 'self'`, no `unsafe-inline`) and React's escaping by default |
+| Transport | `Secure` + `HttpOnly` + `SameSite=Lax` cookies and HSTS in production |
+| Secrets | Production **refuses to boot** without `SECRET_KEY` rather than falling back to a shared default |
+| Error leakage | Unhandled exceptions return a generic message; the traceback goes to the log with a correlation id |
+
+Authorization is enforced **server-side on every endpoint**. The React route
+guards exist for UX only — anything decided in the browser can be edited in the
+browser, so `backend/tests/test_authorization.py` asserts the real rules.
+
+### Permission matrix
 
 | Capability | Admin | Manager | Employee |
 |---|:---:|:---:|:---:|
-| Create / delete tasks | ✓ | ✓ | |
-| Assign tasks to employees | ✓ | ✓ | |
-| Manage departments | ✓ | | |
+| Create / edit / delete tasks | ✓ | ✓ | |
+| Assign work, remove assignments | ✓ | ✓ | |
+| View all assignments & staff directory | ✓ | ✓ | |
+| Manage departments | ✓ | ✓ | |
 | Create manager / admin accounts | ✓ | | |
-| Create employee accounts | ✓ | ✓ | |
+| Read the audit log | ✓ | | |
+| Update **own** assignment status | ✓ | ✓ | ✓ |
+| View own profile | ✓ | ✓ | ✓ |
 | Self-register (always as employee) | ✓ | ✓ | ✓ |
-| Update own task status & progress | ✓ | ✓ | ✓ |
-| View full activity audit log | ✓ | | |
-
-### UI & Animations
-
-- **Drag-and-drop Kanban** — drag cards between status columns; status update hits MySQL in real time
-- **Confetti burst** — Web Animations API particle explosion fires every time a task reaches Completed
-- **3D tilt + spotlight** — stat and task cards tilt toward the cursor with a following light gradient using CSS custom properties
-- **Liquid nav indicator** — sidebar active-state marker slides smoothly between items via `translateY()`
-- **Skeleton loaders** — shimmer placeholders appear instantly before data arrives
-- **Hero parallax** — login/signup SVG illustrations tilt with mouse movement
-- **Custom confirm dialogs** — branded modal replaces all native `window.confirm()` calls
-- **Animated counters** — stat values count up from 0 on load (bypasses `requestAnimationFrame` in hidden tabs)
-- **SVG progress ring** — animated arc shows average task completion percentage
-- **Dark / light theme** — persisted in `localStorage`, toggleable from the nav bar
-- **Ripple buttons** — Material-style ink ripple on every click
-- **3-stage responsive layout** — full sidebar (>1080 px) → icon rail (820–1080 px) → mobile drawer (<820 px)
 
 ---
 
-## Tech Stack
+## Running it locally
 
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.10, Flask 3.0, Flask-SQLAlchemy 3.1 |
-| Database | MySQL 8+ (PyMySQL driver) |
-| Auth | Werkzeug `scrypt` hashing, Flask signed session cookies |
-| Frontend | Vanilla JS ES2022, HTML5 Drag & Drop API, Web Animations API |
-| Styles | CSS custom properties, Grid, Flexbox — zero frameworks |
-| Production | Gunicorn 21 WSGI server, Railway (PaaS) |
-
----
-
-## Demo Credentials
-
-| Role | Username | Password |
-|---|---|---|
-| Admin | `ayush.yadav` | `Ayush@123` |
-| Manager | `priya.mehta` | `Manager@123` |
-| Employee | `aarav.sharma` | `Employee@123` |
-| Employee | `rohan.patel` | `Employee@123` |
-| Employee | `ananya.iyer` | `Employee@123` |
-| Employee | `kabir.singh` | `Employee@123` |
-
----
-
-## Local Setup
-
-### Prerequisites
-- Python 3.10+
-- MySQL 8+ running locally
-
-### 1. Clone
+**Requirements:** Python 3.11+, Node 20+. No database server needed — it falls
+back to SQLite.
 
 ```bash
 git clone https://github.com/ayushYadav1107/TaskForge.git
 cd TaskForge
 ```
 
-### 2. Bootstrap (Windows one-shot)
-
-```bat
-setup_project.bat
-```
-
-This creates `backend/venv`, installs all dependencies, and copies `.env.example → backend/.env`.
-
-### 3. Configure the database
-
-Edit `backend/.env`:
-
-```env
-SECRET_KEY=any-random-string
-FLASK_ENV=development
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=taskforge
-```
-
-Create the database in MySQL:
-
-```sql
-CREATE DATABASE taskforge CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 4. Initialise tables & seed demo data
+**API** (terminal 1):
 
 ```bash
 cd backend
-venv\Scripts\activate        # macOS/Linux: source venv/bin/activate
-flask --app task_management init-db
-flask --app task_management seed
+python -m venv venv && venv/Scripts/activate      # macOS/Linux: source venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env
+flask --app task_management seed                  # demo data + logins
+python run.py                                     # http://localhost:5000
 ```
 
-### 5. Start
+**Front end** (terminal 2):
 
 ```bash
-python run.py
+cd web
+npm install
+npm run dev                                       # http://localhost:5173
 ```
 
-Open [http://localhost:5000](http://localhost:5000) and sign in with any demo account above.
+Vite proxies `/api` to port 5000, so the cookie stays first-party in dev
+exactly as it is in production.
 
----
+### Demo logins
 
-## Project Structure
+Created by `flask seed`:
 
-```
-TaskForge/
-├── backend/
-│   ├── task_management/
-│   │   ├── models/          # SQLAlchemy models (User, Employee, Task, …)
-│   │   ├── routes/          # Flask blueprints (auth, task, employee, …)
-│   │   ├── services/        # Business logic + validation
-│   │   ├── auth_decorators.py
-│   │   ├── config.py        # Env-based configuration
-│   │   ├── extensions.py    # db = SQLAlchemy()
-│   │   ├── seed.py          # Sample data seeder
-│   │   └── __init__.py      # App factory (create_app)
-│   ├── requirements.txt
-│   ├── run.py               # Dev entrypoint
-│   └── .env.example
-├── frontend/
-│   ├── css/style.css        # ~1100 lines — design system, themes, animations
-│   ├── js/
-│   │   ├── api.js           # Shared helpers (fetch, tilt, confetti, drag-drop, …)
-│   │   ├── admin.js         # Admin/manager dashboard
-│   │   ├── employee.js      # Employee workspace
-│   │   ├── login.js
-│   │   └── signup.js
-│   ├── index.html           # Login
-│   ├── signup.html
-│   ├── admin.html
-│   └── employee.html
-├── database/
-│   └── schema.sql           # Full MySQL DDL (reviewable independently of the ORM)
-├── start.sh                 # Production entrypoint: init-db → gunicorn
-├── railway.toml             # Railway build & deploy config
-├── nixpacks.toml            # Nixpacks build instructions
-└── setup_project.bat        # Windows bootstrap
+| Role | Username | Password |
+|---|---|---|
+| Admin | `ayush.yadav` | `Ayush@123` |
+| Manager | `priya.mehta` | `Manager@123` |
+| Employee | `aarav.sharma` | `Employee@123` |
+
+To show these on the sign-in page, build with `VITE_DEMO_MODE=true`. A real
+deploy mints a random admin password on first boot instead.
+
+### Using MySQL or Postgres instead
+
+Set one variable in `backend/.env`:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/taskforge
+DATABASE_URL=mysql://root:password@localhost:3306/taskforge
 ```
 
----
-
-## Deployment (Railway)
-
-Railway is the recommended host — it provides MySQL and Python in one click.
-
-### Steps
-
-1. Push this repo to GitHub (already done if you cloned it).
-2. Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → select `TaskForge`.
-3. Add a **MySQL** plugin from the service dashboard (Railway auto-sets `DATABASE_URL`).
-4. Add these environment variables in the service **Variables** tab:
-
-   | Variable | Value |
-   |---|---|
-   | `SECRET_KEY` | any long random string |
-   | `FLASK_ENV` | `production` |
-
-5. Click **Deploy**. Railway runs `start.sh` which calls `flask init-db` (idempotent) then starts Gunicorn on the assigned `$PORT`.
-6. To seed demo data, open the Railway shell and run:
-   ```bash
-   cd backend && flask --app task_management seed
-   ```
+`backend/../database/schema.sql` holds the original hand-written MySQL schema;
+Alembic is the source of truth now.
 
 ---
 
-## API Reference
+## Tests
 
-| Method | Path | Auth required | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/login` | — | Sign in |
-| `POST` | `/api/auth/register` | — | Self-signup (employee role only) |
-| `GET` | `/api/auth/me` | session | Current user info |
-| `POST` | `/api/auth/logout` | session | Sign out |
-| `GET` | `/api/tasks` | admin/manager | List all tasks |
-| `POST` | `/api/tasks` | admin/manager | Create task |
-| `PUT` | `/api/tasks/:id` | admin/manager | Edit task |
-| `DELETE` | `/api/tasks/:id` | admin/manager | Soft-delete task |
-| `GET` | `/api/employees` | admin/manager | List employees |
-| `POST` | `/api/employees` | admin/manager | Create employee (+optional user) |
-| `GET` | `/api/assignments/employee/:id` | session | Employee's assignments |
-| `POST` | `/api/assignments` | admin/manager | Assign task to employee |
-| `PUT` | `/api/assignments/:id/status` | session | Update status / progress |
-| `DELETE` | `/api/assignments/:id` | admin/manager | Unassign |
-| `GET` | `/api/dashboard/stats` | session | Aggregate stats |
-| `GET` | `/api/activity` | admin | Activity audit log |
-| `GET` | `/api/departments` | session | Department list |
+92 tests, no database server and no browser required.
+
+```bash
+cd backend && pytest -q          # 69 — auth, RBAC, CSRF, deploy config
+cd web && npm run test           # 23 — API client, formatting
+```
+
+The backend suite runs on in-memory SQLite with a fresh schema per test. The
+most load-bearing file is `test_authorization.py`: it pins every rule in the
+matrix above, including the ones that were originally wrong.
+
+`test_config.py` is worth a look too — it pins the database-URL normalisation
+that decides whether a deploy boots at all. Managed hosts hand out
+`postgres://`, which SQLAlchemy 2 rejects outright, and that failure cannot be
+reproduced locally against SQLite.
 
 ---
 
-## Security
+## Deployment
 
-- Passwords hashed with Werkzeug `scrypt` — never stored in plain text
-- `SESSION_COOKIE_HTTPONLY=True`; `SESSION_COOKIE_SECURE=True` when `FLASK_ENV=production`
-- Manager/admin account creation enforced at **both** the JS layer (hidden UI) and server layer (returns `403` for unauthorised role requests)
-- Self-signup always produces `role=employee` regardless of the posted payload
-- `backend/.env` is gitignored — credentials are never committed
+The `Dockerfile` is a two-stage build: Node compiles the SPA, then a slim
+Python image takes only the built assets, runs as a non-root user, and serves
+both through Gunicorn. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for Render,
+Railway, Fly.io and plain-Docker instructions.
+
+```bash
+docker build -t taskforge .
+docker run -p 8000:8000 \
+  -e SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
+  -e APP_ENV=production \
+  -e DATABASE_URL="postgresql://…" \
+  taskforge
+```
+
+On first boot against an empty database the app applies migrations, creates the
+default departments, and mints an admin account — so a fresh deploy is usable
+immediately instead of presenting a signup form with an empty department list.
+
+`/api/healthz` is a pure liveness check; `/api/readyz` round-trips a query and
+returns 503 when the database is unreachable.
 
 ---
 
-## Data Model
+## API
 
-| Table | Purpose |
-|---|---|
-| `users` | Login accounts with role (`admin` / `manager` / `employee`) |
-| `departments` | Org department master list |
-| `employees` | HR profile, linked 1:1 to a user account |
-| `tasks` | Task definitions (title, priority, estimated hours, notes) |
-| `task_assignments` | Junction: which employee does which task, status, completion % |
-| `activity_logs` | Audit trail — before/after JSON snapshots |
+All routes are under `/api`. Mutations require the `X-CSRF-Token` header.
+
+| Method | Route | Access |
+|---|---|---|
+| `POST` | `/auth/register` · `/auth/login` | public |
+| `GET` | `/auth/departments` | public (the signup picker needs it) |
+| `GET` | `/auth/me` | authenticated |
+| `POST` | `/auth/logout` · `/auth/change-password` | authenticated |
+| `GET` | `/tasks` (filter, search, paginate) | authenticated |
+| `POST` `PUT` `DELETE` | `/tasks` · `/tasks/<id>` | admin, manager |
+| `GET` | `/assignments` · `/assignments/task/<id>` | admin, manager |
+| `GET` | `/assignments/mine` | authenticated |
+| `POST` `DELETE` | `/assignments` · `/assignments/<id>` | admin, manager |
+| `PUT` | `/assignments/<id>/status` | owner, or admin/manager |
+| `GET` `POST` `PUT` `DELETE` | `/employees` | admin, manager |
+| `GET` | `/departments` | authenticated |
+| `POST` | `/departments` | admin, manager |
+| `GET` | `/dashboard/stats` | admin, manager |
+| `GET` | `/dashboard/activity` | admin |
+| `GET` | `/healthz` · `/readyz` | public |
 
 ---
 
-## License
+## Engineering notes
 
-MIT © 2025 [Ayush Yadav](https://github.com/ayushYadav1107)
+Things worth asking me about:
+
+- **Authorization was the real bug.** The first version guarded task and
+  assignment endpoints with "is logged in" rather than "is allowed", so any
+  employee could delete tasks and edit other people's progress. Fixing it meant
+  separating authentication from authorization and writing the tests that prove
+  the difference.
+- **N+1 queries.** The task list issued one `COUNT` per task and the dashboard
+  loaded every assignment row into Python to tally statuses. Both are now a
+  single `GROUP BY`.
+- **Naive UTC timestamps.** The API serialises `datetime.utcnow()` with no zone
+  marker, so the browser read every timestamp as local time and labelled
+  everything "just now". Pinned in `format.test.ts`.
+- **Logout raced its own redirect.** Clearing the query cache left the auth
+  query pending, so the route guard read the last known user for one render and
+  bounced straight back to the dashboard. Signed-out is now modelled as data
+  (`null`), not as an absent value.
+- **Why not JWT?** Same-origin SPA, so a cookie is strictly better: `HttpOnly`
+  means a script cannot read it, and revocation is immediate. A token in
+  `localStorage` buys nothing here and is readable by any injected script.
+
+---
+
+## Project layout
+
+```
+backend/
+  task_management/
+    routes/        HTTP layer — parse, delegate, respond
+    services/      business rules and validation
+    models/        SQLAlchemy models
+    config.py      env-driven, multi-engine
+    security.py    CSRF, security headers, request ids
+  migrations/      Alembic
+  tests/           pytest
+web/
+  src/
+    api/           typed client + TanStack Query hooks
+    auth/          session context and route guards
+    components/    Modal, Toast, ConfirmDialog, UI primitives
+    pages/         one file per screen
+    styles/        design system
+Dockerfile         two-stage build
+render.yaml        one-click Render blueprint
+```
+
+---
+
+Built by **Ayush Yadav** · [MIT](LICENSE)

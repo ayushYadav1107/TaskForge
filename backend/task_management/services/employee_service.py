@@ -58,7 +58,7 @@ def create_employee(fields, actor_id):
         try:
             validate_password(password)
         except AuthError as err:
-            raise EmployeeError(err.message)
+            raise EmployeeError(err.message) from err
         if User.query.filter_by(username=username).first():
             raise EmployeeError("That username is already taken")
 

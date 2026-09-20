@@ -14,7 +14,12 @@ from .extensions import db, migrate
 from .security import init_logging, init_security
 from .services.errors import AppError
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+BACKEND_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+REPO_ROOT = os.path.normpath(os.path.join(BACKEND_DIR, ".."))
+
+# Absolute, so `flask db` and the boot-time upgrade find the same scripts no
+# matter which directory the process was started from.
+MIGRATIONS_DIR = os.path.join(BACKEND_DIR, "migrations")
 
 # Vite writes the production bundle here; `web/index.html` only exists in a
 # dev checkout, where Vite serves it itself on :5173.
@@ -27,7 +32,7 @@ def create_app(config_object=None):
 
     init_logging(app)
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, directory=MIGRATIONS_DIR)
 
     from . import models  # noqa: F401  (registers models with SQLAlchemy metadata)
     from .routes import register_routes
@@ -106,7 +111,7 @@ def bootstrap(app):
     from .seed import ensure_baseline
 
     try:
-        if os.path.isdir(os.path.join(os.path.dirname(__file__), "..", "migrations")):
+        if os.path.isdir(MIGRATIONS_DIR):
             # Alembic owns the schema wherever it is available, so a deploy
             # applies pending migrations instead of silently skipping columns
             # that create_all() would never add to an existing table.
