@@ -38,7 +38,7 @@ def create_task(fields, created_by):
 
 
 def get_task(task_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task or task.is_deleted:
         raise TaskError("Task not found", 404)
     return task
@@ -77,21 +77,45 @@ def delete_task(task_id, actor_id):
     return True
 
 
-def list_tasks(filters=None):
+def list_tasks(filters=None, page=1, per_page=100):
+    """Returns `(tasks, total)`, each task already carrying its assignment count.
+
+    The counts come from a single GROUP BY rather than one COUNT per row —
+    the previous per-task query made the backlog screen O(n) round trips.
+    """
     filters = filters or {}
     query = Task.query.filter_by(is_deleted=False)
 
     if filters.get("priority"):
-        query = query.filter_by(priority=filters["priority"])
+        query = query.filter(Task.priority == filters["priority"])
     if filters.get("created_by"):
-        query = query.filter_by(created_by=filters["created_by"])
-
-    tasks = query.order_by(Task.created_at.desc()).all()
-
+        query = query.filter(Task.created_by == filters["created_by"])
+    if filters.get("search"):
+        needle = f"%{filters['search'].strip()}%"
+        query = query.filter(db.or_(Task.title.ilike(needle), Task.description.ilike(needle)))
     if filters.get("status"):
-        matching_task_ids = {
-            a.task_id for a in TaskAssignment.query.filter_by(status=filters["status"]).all()
-        }
-        tasks = [t for t in tasks if t.id in matching_task_ids]
+        query = query.filter(
+            Task.id.in_(
+                db.session.query(TaskAssignment.task_id).filter(
+                    TaskAssignment.status == filters["status"]
+                )
+            )
+        )
 
-    return tasks
+    total = query.order_by(None).count()
+    page = max(1, page)
+    tasks = (
+        query.order_by(Task.created_at.desc())
+        .limit(per_page)
+        .offset((page - 1) * per_page)
+        .all()
+    )
+
+    counts = dict(
+        db.session.query(TaskAssignment.task_id, db.func.count(TaskAssignment.id))
+        .filter(TaskAssignment.task_id.in_([t.id for t in tasks] or [0]))
+        .group_by(TaskAssignment.task_id)
+        .all()
+    )
+
+    return [t.to_dict(assignment_count=counts.get(t.id, 0)) for t in tasks], total

@@ -1,15 +1,18 @@
 from flask import Blueprint, g, jsonify, request
 
-from ..auth_decorators import login_required
-from ..models import TaskAssignment
+from ..auth_decorators import login_required, roles_required
 from ..services import task_service
 from ..services.errors import TaskError
 
 task_bp = Blueprint("task", __name__)
 
+# Only admins and managers own the task backlog; employees see tasks through
+# the assignments made to them.
+MANAGES_TASKS = ("admin", "manager")
+
 
 @task_bp.route("", methods=["POST"])
-@login_required
+@roles_required(*MANAGES_TASKS)
 def create_task():
     try:
         task = task_service.create_task(request.get_json(silent=True) or {}, g.current_user.id)
@@ -23,15 +26,22 @@ def create_task():
 def list_tasks():
     filters = {
         "priority": request.args.get("priority"),
-        "created_by": request.args.get("created_by"),
+        "created_by": request.args.get("created_by", type=int),
         "status": request.args.get("status"),
+        "search": request.args.get("search"),
     }
-    tasks = task_service.list_tasks(filters)
-    result = []
-    for t in tasks:
-        count = TaskAssignment.query.filter_by(task_id=t.id).count()
-        result.append(t.to_dict(assignment_count=count))
-    return jsonify({"tasks": result})
+    page = request.args.get("page", default=1, type=int)
+    per_page = min(request.args.get("per_page", default=100, type=int) or 100, 200)
+
+    tasks, total = task_service.list_tasks(filters, page=page, per_page=per_page)
+    return jsonify(
+        {
+            "tasks": tasks,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+        }
+    )
 
 
 @task_bp.route("/<int:task_id>", methods=["GET"])
@@ -44,7 +54,7 @@ def get_task(task_id):
 
 
 @task_bp.route("/<int:task_id>", methods=["PUT"])
-@login_required
+@roles_required(*MANAGES_TASKS)
 def update_task(task_id):
     try:
         task = task_service.update_task(task_id, request.get_json(silent=True) or {}, g.current_user.id)
@@ -54,7 +64,7 @@ def update_task(task_id):
 
 
 @task_bp.route("/<int:task_id>", methods=["DELETE"])
-@login_required
+@roles_required(*MANAGES_TASKS)
 def delete_task(task_id):
     try:
         task_service.delete_task(task_id, g.current_user.id)

@@ -7,6 +7,15 @@ from ..auth_decorators import login_required
 auth_bp = Blueprint("auth", __name__)
 
 
+def _start_session(user):
+    """Drops anything left over from a previous visitor before establishing the
+    new session, so no attacker-planted key survives the login boundary."""
+    session.clear()
+    session["user_id"] = user.id
+    session["role"] = user.role
+    session.permanent = True
+
+
 # Public — the signup form needs to populate its department picker before
 # the visitor has an account.
 @auth_bp.route("/departments", methods=["GET"])
@@ -19,8 +28,7 @@ def list_departments():
 def register():
     try:
         user = auth_service.register_user(request.get_json(silent=True) or {})
-        session["user_id"] = user.id
-        session["role"] = user.role
+        _start_session(user)
         return jsonify({"user": user.to_dict()}), 201
     except AuthError as err:
         return jsonify({"error": err.message}), err.status
@@ -35,8 +43,7 @@ def login():
 
     try:
         user = auth_service.authenticate_user(username, password)
-        session["user_id"] = user.id
-        session["role"] = user.role
+        _start_session(user)
         return jsonify({"user": user.to_dict()})
     except AuthError as err:
         return jsonify({"error": err.message}), err.status

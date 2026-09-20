@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy.orm import joinedload
+
 from ..extensions import db
 from ..models import Employee, Task, TaskAssignment
 from .activity_service import log as log_activity
@@ -9,11 +11,11 @@ STATUSES = ("Pending", "In Progress", "Completed", "On Hold", "Cancelled")
 
 
 def assign_task_to_employee(task_id, employee_id, actor_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task or task.is_deleted:
         raise AssignmentError("Task not found", 404)
 
-    employee = Employee.query.get(employee_id)
+    employee = db.session.get(Employee, employee_id)
     if not employee or not employee.is_active:
         raise AssignmentError("Employee not found", 404)
 
@@ -28,10 +30,15 @@ def assign_task_to_employee(task_id, employee_id, actor_id):
     return assignment
 
 
-def update_assignment_status(assignment_id, fields, actor_id):
-    assignment = TaskAssignment.query.get(assignment_id)
+def get_assignment(assignment_id):
+    assignment = db.session.get(TaskAssignment, assignment_id)
     if not assignment:
         raise AssignmentError("Assignment not found", 404)
+    return assignment
+
+
+def update_assignment_status(assignment_id, fields, actor_id):
+    assignment = get_assignment(assignment_id)
 
     before = assignment.to_dict()
 
@@ -41,7 +48,10 @@ def update_assignment_status(assignment_id, fields, actor_id):
         assignment.status = fields["status"]
 
     if fields.get("completion_percentage") is not None:
-        pct = int(fields["completion_percentage"])
+        try:
+            pct = int(fields["completion_percentage"])
+        except (TypeError, ValueError):
+            raise AssignmentError("completion_percentage must be a whole number")
         if pct < 0 or pct > 100:
             raise AssignmentError("completion_percentage must be between 0 and 100")
         assignment.completion_percentage = pct
@@ -60,9 +70,7 @@ def update_assignment_status(assignment_id, fields, actor_id):
 
 
 def remove_assignment(assignment_id, actor_id):
-    assignment = TaskAssignment.query.get(assignment_id)
-    if not assignment:
-        raise AssignmentError("Assignment not found", 404)
+    assignment = get_assignment(assignment_id)
 
     before = assignment.to_dict()
     db.session.delete(assignment)
@@ -74,7 +82,8 @@ def remove_assignment(assignment_id, actor_id):
 
 def get_assignments_for_employee(employee_id):
     assignments = (
-        TaskAssignment.query.filter_by(employee_id=employee_id)
+        TaskAssignment.query.options(joinedload(TaskAssignment.task))
+        .filter_by(employee_id=employee_id)
         .order_by(TaskAssignment.assigned_at.desc())
         .all()
     )
@@ -82,12 +91,22 @@ def get_assignments_for_employee(employee_id):
 
 
 def get_assignments_for_task(task_id):
-    assignments = TaskAssignment.query.filter_by(task_id=task_id).all()
+    assignments = (
+        TaskAssignment.query.options(joinedload(TaskAssignment.employee))
+        .filter_by(task_id=task_id)
+        .all()
+    )
     return [a.to_dict_with_employee() for a in assignments]
 
 
 def list_all_assignments():
-    assignments = TaskAssignment.query.order_by(TaskAssignment.assigned_at.desc()).all()
+    assignments = (
+        TaskAssignment.query.options(
+            joinedload(TaskAssignment.task), joinedload(TaskAssignment.employee)
+        )
+        .order_by(TaskAssignment.assigned_at.desc())
+        .all()
+    )
     results = []
     for a in assignments:
         data = a.to_dict_with_employee()

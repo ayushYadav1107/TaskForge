@@ -3,16 +3,12 @@
 Run via `flask --app task_management seed` (see backend/run.py for the
 FLASK_APP entrypoint), or `python -m task_management.seed` from backend/.
 """
+import secrets
 from datetime import date, datetime
-
-from werkzeug.security import generate_password_hash
 
 from .extensions import db
 from .models import ActivityLog, Department, Employee, Task, TaskAssignment, User
-
-
-def _hash(password):
-    return generate_password_hash(password, method="scrypt")
+from .services.passwords import hash_password as _hash
 
 
 def run():
@@ -117,6 +113,64 @@ def run():
     print("  Admin login:    ayush.yadav / Ayush@123")
     print("  Manager login:  priya.mehta / Manager@123")
     print("  Employee login: aarav.sharma / Employee@123 (also rohan.patel, ananya.iyer, kabir.singh)")
+
+
+DEFAULT_DEPARTMENTS = [
+    ("Engineering", "Builds and maintains the product"),
+    ("Design", "Product design and user experience"),
+    ("Sales", "Revenue, pipeline and customer accounts"),
+    ("Human Resources", "Hiring, onboarding and people operations"),
+    ("Operations", "Internal processes and support"),
+]
+
+
+def ensure_baseline(app, force=False):
+    """Idempotent first-boot setup: departments plus one admin account.
+
+    A fresh deploy otherwise has an empty department list, which leaves the
+    signup form with nothing to pick and no way to create the first user.
+    Returns a human-readable note when it creates the admin, else None.
+    """
+    created = []
+
+    if not Department.query.first():
+        db.session.add_all(
+            Department(name=name, description=description)
+            for name, description in DEFAULT_DEPARTMENTS
+        )
+        db.session.commit()
+        created.append(f"{len(DEFAULT_DEPARTMENTS)} departments")
+
+    existing_admin = User.query.filter_by(role="admin").first()
+    if existing_admin and not force:
+        if created:
+            app.logger.info("Bootstrap created: %s", ", ".join(created))
+        return None
+    if existing_admin:
+        return f"Admin account already exists: {existing_admin.username}"
+
+    username = app.config["BOOTSTRAP_ADMIN_USERNAME"]
+    password = app.config.get("BOOTSTRAP_ADMIN_PASSWORD")
+    generated = password is None
+    if generated:
+        # Never ship a hard-coded production password. If the operator didn't
+        # supply one, mint a random password and print it exactly once.
+        password = secrets.token_urlsafe(12)
+
+    admin = User(username=username, password_hash=_hash(password), role="admin")
+    db.session.add(admin)
+    db.session.commit()
+
+    note = f"Created admin '{username}'"
+    if generated:
+        note += f" with generated password: {password}"
+        app.logger.warning(
+            "BOOTSTRAP ADMIN CREATED — username=%s password=%s "
+            "(set BOOTSTRAP_ADMIN_PASSWORD to choose your own, then change it after first login)",
+            username,
+            password,
+        )
+    return note
 
 
 if __name__ == "__main__":

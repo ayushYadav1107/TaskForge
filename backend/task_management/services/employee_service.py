@@ -1,11 +1,10 @@
 from datetime import date
 
-from werkzeug.security import generate_password_hash
-
 from ..extensions import db
 from ..models import Department, Employee, User
 from .activity_service import log as log_activity
-from .errors import EmployeeError
+from .errors import AuthError, EmployeeError
+from .passwords import hash_password, validate_password
 
 REQUIRED_FIELDS = ["department_id", "employee_code", "first_name", "last_name", "email", "phone"]
 ROLES = ("admin", "manager", "employee")
@@ -17,7 +16,7 @@ def _missing_fields(fields):
 
 def generate_employee_code(department_id):
     """Builds the next free code for a department, e.g. Engineering -> ENG-003."""
-    department = Department.query.get(department_id)
+    department = db.session.get(Department, department_id)
     raw = (department.name if department else "EMP") or "EMP"
     prefix = "".join(ch for ch in raw if ch.isalpha())[:3].upper() or "EMP"
 
@@ -35,7 +34,7 @@ def create_employee(fields, actor_id):
         verb = "are" if len(missing) > 1 else "is"
         raise EmployeeError(f"{', '.join(missing)} {verb} required")
 
-    department = Department.query.get(fields.get("department_id"))
+    department = db.session.get(Department, fields.get("department_id"))
     if not department:
         raise EmployeeError("department_id does not exist")
     if Employee.query.filter_by(employee_code=fields["employee_code"]).first():
@@ -46,7 +45,7 @@ def create_employee(fields, actor_id):
     user_id = fields.get("user_id")
 
     if user_id:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             raise EmployeeError("user_id does not exist")
         if Employee.query.filter_by(user_id=user_id).first():
@@ -56,13 +55,15 @@ def create_employee(fields, actor_id):
         password = fields.get("password")
         if not username or not password:
             raise EmployeeError("username and password are required to create the employee's login")
-        if len(password) < 6:
-            raise EmployeeError("Password must be at least 6 characters")
+        try:
+            validate_password(password)
+        except AuthError as err:
+            raise EmployeeError(err.message)
         if User.query.filter_by(username=username).first():
             raise EmployeeError("That username is already taken")
 
         role = fields.get("role") if fields.get("role") in ROLES else "employee"
-        user = User(username=username, password_hash=generate_password_hash(password, method="scrypt"), role=role)
+        user = User(username=username, password_hash=hash_password(password), role=role)
         db.session.add(user)
         db.session.flush()  # assigns user.id without a full commit
         user_id = user.id
@@ -86,14 +87,14 @@ def create_employee(fields, actor_id):
 
 
 def get_employee(employee_id):
-    employee = Employee.query.get(employee_id)
+    employee = db.session.get(Employee, employee_id)
     if not employee:
         raise EmployeeError("Employee not found", 404)
     return employee
 
 
 def update_employee(employee_id, fields, actor_id):
-    employee = Employee.query.get(employee_id)
+    employee = db.session.get(Employee, employee_id)
     if not employee:
         raise EmployeeError("Employee not found", 404)
 
@@ -105,7 +106,7 @@ def update_employee(employee_id, fields, actor_id):
     patch.pop("id", None)
     patch.pop("user_id", None)
 
-    if patch.get("department_id") and not Department.query.get(patch["department_id"]):
+    if patch.get("department_id") and not db.session.get(Department, patch["department_id"]):
         raise EmployeeError("department_id does not exist")
 
     for key in ["department_id", "employee_code", "first_name", "last_name", "email", "phone", "position", "hire_date"]:
@@ -118,7 +119,7 @@ def update_employee(employee_id, fields, actor_id):
 
 
 def delete_employee(employee_id, actor_id):
-    employee = Employee.query.get(employee_id)
+    employee = db.session.get(Employee, employee_id)
     if not employee:
         raise EmployeeError("Employee not found", 404)
 

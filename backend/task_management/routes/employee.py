@@ -1,6 +1,6 @@
 from flask import Blueprint, g, jsonify, request
 
-from ..auth_decorators import login_required, roles_required
+from ..auth_decorators import current_employee, login_required, roles_required
 from ..services import employee_service
 from ..services.errors import EmployeeError
 
@@ -23,14 +23,14 @@ def create_employee():
 
 
 @employee_bp.route("", methods=["GET"])
-@login_required
+@roles_required("admin", "manager")
 def list_employees():
     employees = employee_service.list_employees()
     return jsonify({"employees": [e.to_dict() for e in employees]})
 
 
 @employee_bp.route("/department/<int:department_id>", methods=["GET"])
-@login_required
+@roles_required("admin", "manager")
 def list_by_department(department_id):
     employees = employee_service.list_employees_by_department(department_id)
     return jsonify({"employees": [e.to_dict() for e in employees]})
@@ -39,6 +39,9 @@ def list_by_department(department_id):
 @employee_bp.route("/<int:employee_id>", methods=["GET"])
 @login_required
 def get_employee(employee_id):
+    mine = current_employee()
+    if g.current_user.role not in ("admin", "manager") and not (mine and mine.id == employee_id):
+        return jsonify({"error": "You can only view your own profile"}), 403
     try:
         return jsonify({"employee": employee_service.get_employee(employee_id).to_dict()})
     except EmployeeError as err:

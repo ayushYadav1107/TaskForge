@@ -6,3 +6,17 @@ venv/
 .env
 .DS_Store
 instance/
+
+# Node / frontend build
+node_modules/
+web/dist/
+
+# Python
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases
+*.db
+*.sqlite3
