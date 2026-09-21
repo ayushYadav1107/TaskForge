@@ -15,8 +15,8 @@ const ConfirmContext = createContext<Confirm | null>(null);
 
 /**
  * Promise-based replacement for window.confirm(), so destructive actions get a
- * branded, focus-trapped dialog instead of a browser alert that some mobile
- * browsers suppress entirely.
+ * focus-trapped dialog that matches the rest of the app instead of a browser
+ * alert some mobile browsers suppress entirely.
  */
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
@@ -44,8 +44,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         onClose={() => settle(false)}
         width={400}
       >
-        <p className="modal-sub">{options?.message}</p>
-        <div className="modal-actions">
+        <div className="dialog-body">
+          <p className="text-sm muted">{options?.message}</p>
+        </div>
+        <div className="dialog-footer">
           <button type="button" className="btn btn-ghost" onClick={() => settle(false)}>
             Cancel
           </button>

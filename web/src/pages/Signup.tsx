@@ -4,8 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import type { Department } from "../api/types";
 import { landingFor, useAuth } from "../auth/AuthContext";
-import { FormError } from "../components/ui";
-import { AuthBrandPanel } from "./AuthBrandPanel";
+import { Field, FormError } from "../components/ui";
+import { AuthLayout } from "./AuthLayout";
 
 const EMPTY = {
   first_name: "",
@@ -63,102 +63,132 @@ export function Signup() {
   }
 
   return (
-    <div className="auth-shell">
-      <AuthBrandPanel
-        heading={
-          <>
-            Join your team
-            <br />
-            in under a minute.
-          </>
-        }
-        lede="Create your employee account, pick your department, and your manager can start assigning you work straight away."
-      />
+    <AuthLayout
+      headline="Join your team in a minute."
+      lede="Create your employee account, pick your department, and your manager can start assigning you work straight away."
+    >
+      <div className="auth-card auth-card--wide">
+        <div className="auth-mobile-brand">
+          <span className="brand-mark">TF</span>
+          TaskForge
+        </div>
 
-      <section className="auth-form-side">
-        <div className="auth-card auth-card--wide">
-          <div className="auth-mobile-head">
-            <span className="logo-dot">TF</span>
-            <span>TaskForge</span>
+        <h1>Create account</h1>
+        <p className="auth-card-sub">
+          You will be added as an employee — managers and admins are created by an administrator.
+        </p>
+
+        <FormError message={error} />
+
+        <form onSubmit={onSubmit} noValidate>
+          <div className="form-row">
+            <Field label="First name" htmlFor="first-name">
+              <input
+                id="first-name"
+                autoComplete="given-name"
+                value={fields.first_name}
+                onChange={set("first_name")}
+                required
+                autoFocus
+              />
+            </Field>
+            <Field label="Last name" htmlFor="last-name">
+              <input
+                id="last-name"
+                autoComplete="family-name"
+                value={fields.last_name}
+                onChange={set("last_name")}
+                required
+              />
+            </Field>
           </div>
 
-          <h2>Create your account</h2>
-          <p className="sub">
-            Sign up as an employee — managers and admins are created by an administrator.
-          </p>
+          <div className="form-row">
+            <Field label="Email" htmlFor="email">
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={fields.email}
+                onChange={set("email")}
+                required
+              />
+            </Field>
+            <Field label="Phone" htmlFor="phone">
+              <input
+                id="phone"
+                autoComplete="tel"
+                value={fields.phone}
+                onChange={set("phone")}
+                required
+              />
+            </Field>
+          </div>
 
-          <FormError message={error} />
+          <div className="form-row">
+            <Field label="Department" htmlFor="department">
+              <select
+                id="department"
+                value={fields.department_id}
+                onChange={set("department_id")}
+                required
+              >
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Position" htmlFor="position">
+              <input
+                id="position"
+                placeholder="Software Engineer"
+                value={fields.position}
+                onChange={set("position")}
+              />
+            </Field>
+          </div>
 
-          <form onSubmit={onSubmit} noValidate>
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="first-name">First name</label>
-                <input id="first-name" autoComplete="given-name" value={fields.first_name} onChange={set("first_name")} required />
-              </div>
-              <div className="field">
-                <label htmlFor="last-name">Last name</label>
-                <input id="last-name" autoComplete="family-name" value={fields.last_name} onChange={set("last_name")} required />
-              </div>
-            </div>
+          <div className="form-row">
+            <Field
+              label="Username"
+              htmlFor="new-username"
+              hint="Letters, numbers, dot, dash or underscore."
+            >
+              <input
+                id="new-username"
+                autoComplete="username"
+                value={fields.username}
+                onChange={set("username")}
+                required
+              />
+            </Field>
+            <Field
+              label="Password"
+              htmlFor="new-password"
+              hint="8+ characters, with a letter and a number."
+            >
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={fields.password}
+                onChange={set("password")}
+                required
+              />
+            </Field>
+          </div>
 
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="email">Email</label>
-                <input id="email" type="email" autoComplete="email" value={fields.email} onChange={set("email")} required />
-              </div>
-              <div className="field">
-                <label htmlFor="phone">Phone</label>
-                <input id="phone" autoComplete="tel" value={fields.phone} onChange={set("phone")} required />
-              </div>
-            </div>
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={submitting}>
+            {submitting ? "Creating account…" : "Create account"}
+          </button>
+        </form>
 
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="department">Department</label>
-                <select id="department" value={fields.department_id} onChange={set("department_id")} required>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="position">Role / position</label>
-                <input id="position" placeholder="e.g. Software Engineer" value={fields.position} onChange={set("position")} />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="field">
-                <label htmlFor="new-username">Username</label>
-                <input id="new-username" autoComplete="username" value={fields.username} onChange={set("username")} required />
-                <div className="hint">Letters, numbers, dot, dash or underscore.</div>
-              </div>
-              <div className="field">
-                <label htmlFor="new-password">Password</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={fields.password}
-                  onChange={set("password")}
-                  required
-                />
-                <div className="hint">At least 8 characters, with a letter and a number.</div>
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? "Creating account…" : "Create account"}
-            </button>
-          </form>
-
-          <p className="auth-alt">
-            Already have an account? <Link to="/login">Sign in</Link>
-          </p>
-        </div>
-      </section>
-    </div>
+        <p className="auth-alt">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+      </div>
+    </AuthLayout>
   );
 }

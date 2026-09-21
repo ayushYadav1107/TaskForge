@@ -1,8 +1,9 @@
+import { History } from "lucide-react";
 import { useState } from "react";
 
 import { useActivity } from "../api/hooks";
-import { Card, EmptyState, SkeletonLines } from "../components/ui";
-import { ActivityList } from "./Overview";
+import { Empty, Panel, SkeletonRows } from "../components/ui";
+import { ActivityFeed } from "./Overview";
 
 const FILTERS = ["All", "CREATE", "UPDATE", "DELETE", "LOGIN"] as const;
 
@@ -13,7 +14,8 @@ export function Activity() {
   const visible = (entries ?? []).filter((entry) => filter === "All" || entry.action === filter);
 
   return (
-    <Card
+    <Panel
+      flush
       title="Audit trail"
       actions={
         <div className="segmented" role="group" aria-label="Filter activity">
@@ -21,7 +23,6 @@ export function Activity() {
             <button
               key={value}
               type="button"
-              className={filter === value ? "active" : ""}
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
             >
@@ -32,12 +33,12 @@ export function Activity() {
       }
     >
       {isLoading ? (
-        <SkeletonLines count={8} />
+        <SkeletonRows count={8} />
       ) : visible.length === 0 ? (
-        <EmptyState title="No matching activity" message="Try a different filter." />
+        <Empty icon={<History />} title="No matching activity" message="Try a different filter." />
       ) : (
-        <ActivityList entries={visible} />
+        <ActivityFeed entries={visible} />
       )}
-    </Card>
+    </Panel>
   );
 }

@@ -1,135 +1,224 @@
+import { AlertCircle, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { avatarStyle, badgeClass, initials } from "../lib/format";
+import type { Status } from "../api/types";
+import { avatarStyle, initials, statusSlug } from "../lib/format";
 
-/* --------------------------------- Badge --------------------------------- */
+/* --------------------------------- Panel ---------------------------------- */
 
-export function Badge({ value }: { value?: string | null }) {
-  if (!value) return null;
-  return <span className={`badge ${badgeClass(value)}`}>{value}</span>;
+export function Panel({
+  title,
+  actions,
+  children,
+  flush = false,
+}: {
+  title?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+  flush?: boolean;
+}) {
+  return (
+    <section className="panel">
+      {title || actions ? (
+        <header className="panel-header">
+          {title ? <h2>{title}</h2> : null}
+          <div className="spacer" />
+          {actions}
+        </header>
+      ) : null}
+      <div className={flush ? "panel-body panel-body--flush" : "panel-body"}>{children}</div>
+    </section>
+  );
 }
 
-/* -------------------------------- Avatar --------------------------------- */
+/* -------------------------------- Metric ---------------------------------- */
+
+export function Metric({
+  label,
+  value,
+  icon,
+  foot,
+}: {
+  label: string;
+  value: ReactNode;
+  icon?: ReactNode;
+  foot?: ReactNode;
+}) {
+  return (
+    <div className="metric">
+      <div className="metric-label">
+        {icon}
+        {label}
+      </div>
+      <div className="metric-value">{value}</div>
+      {foot ? <div className="metric-foot">{foot}</div> : null}
+    </div>
+  );
+}
+
+/* --------------------------------- Status --------------------------------- */
+
+/**
+ * A neutral pill with a coloured dot. Five fully-saturated pills in one table
+ * column is noise; five dots is a column you can scan down.
+ */
+export function StatusBadge({ status }: { status?: Status | string | null }) {
+  if (!status) return null;
+  return (
+    <span className="badge">
+      <span className={`status-dot status-${statusSlug(status)}`} />
+      {status}
+    </span>
+  );
+}
+
+export function PriorityBadge({ priority }: { priority?: string | null }) {
+  if (!priority) return null;
+  return <span className={`badge badge-priority badge-${priority}`}>{priority}</span>;
+}
+
+export function RoleBadge({ role }: { role?: string | null }) {
+  if (!role) return null;
+  return <span className={`badge badge-role-${role}`}>{role}</span>;
+}
+
+/* --------------------------------- Avatar --------------------------------- */
 
 export function Avatar({
   first,
   last,
   seed,
-  size = 34,
+  size = 26,
 }: {
   first?: string | null;
   last?: string | null;
   seed?: string | null;
   size?: number;
 }) {
-  const text = initials(first, last);
   return (
     <span
       className="avatar"
       aria-hidden="true"
-      style={{ ...avatarStyle(seed ?? `${first}${last}`), width: size, height: size, fontSize: size * 0.38 }}
+      style={{
+        ...avatarStyle(seed ?? `${first}${last}`),
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.4),
+      }}
     >
-      {text}
+      {initials(first, last)}
     </span>
   );
 }
 
-/* ------------------------------- Stat card -------------------------------- */
-
-export function StatCard({
-  label,
-  value,
-  suffix = "",
-  hint,
-  icon,
-  index = 0,
+export function AvatarStack({
+  people,
+  max = 3,
 }: {
-  label: string;
-  value: number | string;
-  suffix?: string;
-  hint?: string;
-  icon?: ReactNode;
-  index?: number;
+  people: { name?: string | null; seed?: string | null }[];
+  max?: number;
 }) {
+  if (people.length === 0) return <span className="muted text-sm">Unassigned</span>;
+
+  const shown = people.slice(0, max);
+  const extra = people.length - shown.length;
+
   return (
-    <div className="stat-card animate-in" style={{ ["--i" as string]: index }}>
-      {icon ? <div className="stat-icon">{icon}</div> : null}
-      <div className="stat-value">
-        {value}
-        {suffix}
-      </div>
-      <div className="stat-label">{label}</div>
-      {hint ? <div className="stat-hint">{hint}</div> : null}
+    <span className="avatar-stack" title={people.map((p) => p.name).join(", ")}>
+      {shown.map((person, index) => {
+        const [first, last] = (person.name ?? "?").split(" ");
+        return <Avatar key={index} first={first} last={last} seed={person.seed} size={22} />;
+      })}
+      {extra > 0 ? <span className="avatar-more">+{extra}</span> : null}
+    </span>
+  );
+}
+
+/* -------------------------------- Progress -------------------------------- */
+
+export function Meter({
+  percent,
+  status,
+  label,
+}: {
+  percent: number;
+  status?: Status | string | null;
+  label?: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  return (
+    <div
+      className="meter"
+      role="meter"
+      aria-valuenow={Math.round(clamped)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label ?? `${Math.round(clamped)}% complete`}
+    >
+      <span
+        className={`meter-fill${status ? ` status-${statusSlug(status)}` : ""}`}
+        style={{ width: `${clamped}%` }}
+      />
     </div>
   );
 }
 
-/* ------------------------------ Progress ring ----------------------------- */
-
-export function ProgressRing({ percent, size = 128 }: { percent: number; size?: number }) {
-  const radius = 52;
+export function Donut({
+  percent,
+  size = 132,
+  caption,
+}: {
+  percent: number;
+  size?: number;
+  caption?: string;
+}) {
+  const stroke = 8;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, percent));
 
   return (
-    <div className="ring" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs>
-          <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#6d5ef8" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-        </defs>
-        <circle className="ring-track" cx="60" cy="60" r={radius} />
+    <div className="donut" style={{ width: size, height: size }}>
+      <svg width={size} height={size} aria-hidden="true">
         <circle
-          className="ring-value"
-          cx="60"
-          cy="60"
+          className="donut-track"
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
-          style={{
-            strokeDasharray: circumference,
-            strokeDashoffset: circumference * (1 - clamped / 100),
-          }}
+          strokeWidth={stroke}
+        />
+        <circle
+          className="donut-value"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - clamped / 100)}
         />
       </svg>
-      <div className="ring-label">{Math.round(clamped)}%</div>
+      <span className="donut-label">{Math.round(clamped)}%</span>
+      {caption ? <span className="donut-caption">{caption}</span> : null}
     </div>
   );
 }
 
-/* ------------------------------- Empty state ------------------------------ */
+/* ------------------------------ Empty state ------------------------------- */
 
-export function EmptyState({
+export function Empty({
   title,
   message,
+  icon,
   action,
 }: {
   title: string;
   message?: string;
+  icon?: ReactNode;
   action?: ReactNode;
 }) {
   return (
-    <div className="empty-state">
-      <svg viewBox="0 0 200 150" fill="none" aria-hidden="true">
-        <ellipse cx="100" cy="132" rx="62" ry="8" fill="currentColor" opacity=".08" />
-        <rect x="52" y="26" width="96" height="102" rx="10" fill="currentColor" opacity=".07" />
-        <rect
-          x="52"
-          y="26"
-          width="96"
-          height="102"
-          rx="10"
-          stroke="currentColor"
-          strokeOpacity=".22"
-          strokeWidth="2"
-        />
-        <rect x="68" y="14" width="64" height="22" rx="7" fill="currentColor" opacity=".16" />
-        <rect x="68" y="56" width="52" height="7" rx="3.5" fill="currentColor" opacity=".26" />
-        <rect x="68" y="72" width="64" height="7" rx="3.5" fill="currentColor" opacity=".18" />
-        <rect x="68" y="88" width="40" height="7" rx="3.5" fill="currentColor" opacity=".18" />
-        <circle cx="140" cy="104" r="20" fill="var(--primary)" opacity=".14" />
-        <path d="M132 104h16M140 96v16" stroke="var(--primary)" strokeWidth="2.6" strokeLinecap="round" />
-      </svg>
+    <div className="empty">
+      <span className="empty-icon">{icon ?? <Inbox />}</span>
       <h3>{title}</h3>
       {message ? <p>{message}</p> : null}
       {action}
@@ -139,15 +228,15 @@ export function EmptyState({
 
 /* -------------------------------- Skeleton -------------------------------- */
 
-export function SkeletonLines({ count = 4 }: { count?: number }) {
+export function SkeletonRows({ count = 5 }: { count?: number }) {
   return (
     <div>
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="skeleton-row">
           <div className="skeleton skeleton-avatar" />
           <div style={{ flex: 1 }}>
-            <div className="skeleton skeleton-line" style={{ width: "62%" }} />
-            <div className="skeleton skeleton-line" style={{ width: "38%" }} />
+            <div className="skeleton skeleton-line" style={{ width: "44%" }} />
+            <div className="skeleton skeleton-line" style={{ width: "26%", marginBottom: 0 }} />
           </div>
         </div>
       ))}
@@ -155,60 +244,34 @@ export function SkeletonLines({ count = 4 }: { count?: number }) {
   );
 }
 
-/* --------------------------------- Card ----------------------------------- */
-
-export function Card({
-  title,
-  actions,
-  children,
-  index = 0,
-}: {
-  title?: string;
-  actions?: ReactNode;
-  children: ReactNode;
-  index?: number;
-}) {
-  return (
-    <section className="card animate-in" style={{ ["--i" as string]: index }}>
-      {title || actions ? (
-        <header className="card-header">
-          {title ? <h2>{title}</h2> : <span />}
-          {actions}
-        </header>
-      ) : null}
-      {children}
-    </section>
-  );
-}
-
-/* --------------------------------- Field ---------------------------------- */
+/* --------------------------------- Forms ---------------------------------- */
 
 export function Field({
   label,
   hint,
-  children,
   htmlFor,
+  children,
 }: {
   label: string;
   hint?: string;
-  children: ReactNode;
   htmlFor?: string;
+  children: ReactNode;
 }) {
   return (
     <div className="field">
       <label htmlFor={htmlFor}>{label}</label>
       {children}
-      {hint ? <div className="hint">{hint}</div> : null}
+      {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
 }
 
-/** Inline form error, announced to assistive tech the moment it appears. */
 export function FormError({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <div className="field-error" role="alert">
-      {message}
+    <div className="form-error" role="alert">
+      <AlertCircle />
+      <span>{message}</span>
     </div>
   );
 }

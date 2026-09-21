@@ -4,8 +4,10 @@ export function Spinner({ label = "Loading" }: { label?: string }) {
 
 export function FullPageSpinner() {
   return (
-    <div className="full-page-loader">
-      <div className="loader-mark">TF</div>
+    <div className="page-loader">
+      <span className="brand-mark" style={{ width: 32, height: 32, fontSize: 12 }}>
+        TF
+      </span>
       <Spinner label="Loading TaskForge" />
     </div>
   );

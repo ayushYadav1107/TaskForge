@@ -1,63 +1,50 @@
-import { useEffect, useState } from "react";
+import { LogOut, Menu, Moon, Search, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import { CommandPalette } from "../components/CommandPalette";
 import { Avatar } from "../components/ui";
 import { useTheme } from "../theme";
-
-interface NavEntry {
-  to: string;
-  label: string;
-  icon: string;
-  managerOnly?: boolean;
-  adminOnly?: boolean;
-}
-
-const NAV: NavEntry[] = [
-  { to: "/overview", label: "Overview", icon: "◆", managerOnly: true },
-  { to: "/tasks", label: "Tasks", icon: "☰", managerOnly: true },
-  { to: "/employees", label: "Employees", icon: "◉", managerOnly: true },
-  { to: "/departments", label: "Departments", icon: "▣", managerOnly: true },
-  { to: "/activity", label: "Activity Log", icon: "◷", adminOnly: true },
-  { to: "/my-tasks", label: "My Tasks", icon: "✓" },
-  { to: "/profile", label: "Profile", icon: "☺" },
-];
-
-export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
-  "/overview": { title: "Overview", subtitle: "How the whole workspace is tracking." },
-  "/tasks": { title: "Tasks", subtitle: "Create work and assign it to your team." },
-  "/employees": { title: "Employees", subtitle: "Everyone with an account in the workspace." },
-  "/departments": { title: "Departments", subtitle: "How the organisation is divided up." },
-  "/activity": { title: "Activity Log", subtitle: "Every change, who made it, and when." },
-  "/my-tasks": { title: "My Tasks", subtitle: "Everything currently on your plate." },
-  "/profile": { title: "Profile", subtitle: "Your account details and password." },
-};
+import { NAV_ITEMS, metaFor } from "./navigation";
 
 export function AppShell() {
   const { user, canManage, isAdmin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // A route change on mobile should close the drawer, otherwise the new page
   // renders underneath a menu the visitor has to dismiss by hand.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setDrawerOpen(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
+  useGlobalShortcuts({
+    onPalette: () => setPaletteOpen(true),
+    onEscape: () => setDrawerOpen(false),
+    onGoTo: (key) => {
+      const target = NAV_ITEMS.find(
+        (item) => item.shortcut?.toLowerCase().endsWith(key) && allowed(item),
+      );
+      if (target) navigate(target.to);
+    },
+  });
 
-  const meta = PAGE_META[location.pathname] ?? { title: "TaskForge", subtitle: "" };
+  function allowed(item: (typeof NAV_ITEMS)[number]) {
+    if (item.adminOnly) return isAdmin;
+    if (item.managerOnly) return canManage;
+    return true;
+  }
+
+  const meta = metaFor(location.pathname);
   const employee = user?.employee;
+  const displayName = employee ? `${employee.first_name} ${employee.last_name}` : user?.username;
 
-  const visible = NAV.filter((entry) => {
-    if (entry.adminOnly) return isAdmin;
-    if (entry.managerOnly) return canManage;
+  const visible = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return isAdmin;
+    if (item.managerOnly) return canManage;
     return true;
   });
 
@@ -68,7 +55,7 @@ export function AppShell() {
 
   return (
     <>
-      <a className="skip-link" href="#main-content">
+      <a className="skip-link" href="#main">
         Skip to content
       </a>
 
@@ -80,81 +67,171 @@ export function AppShell() {
 
       <div className="app-shell">
         <aside className={`sidebar${drawerOpen ? " open" : ""}`} id="sidebar">
-          <div className="brand-mark">
-            <span className="logo-dot">TF</span>
-            <span className="brand-word">TaskForge</span>
+          <div className="brand">
+            <span className="brand-mark">TF</span>
+            TaskForge
           </div>
 
           <nav aria-label="Main">
-            <div className="nav-section-label">Workspace</div>
-            {visible.map((entry) => (
-              <NavLink
-                key={entry.to}
-                to={entry.to}
-                className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
-              >
-                <span className="nav-icon" aria-hidden="true">
-                  {entry.icon}
-                </span>
-                <span className="nav-label">{entry.label}</span>
-              </NavLink>
-            ))}
+            <div className="nav-group">Workspace</div>
+            {visible.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+                >
+                  <Icon />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
 
           <div className="sidebar-footer">
             <button type="button" className="nav-item" onClick={toggleTheme}>
-              <span className="nav-icon" aria-hidden="true">
-                ◐
-              </span>
-              <span className="nav-label">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+              {theme === "dark" ? <Sun /> : <Moon />}
+              <span>{theme === "dark" ? "Light theme" : "Dark theme"}</span>
             </button>
             <button type="button" className="nav-item" onClick={handleLogout}>
-              <span className="nav-icon" aria-hidden="true">
-                ⏻
-              </span>
-              <span className="nav-label">Log out</span>
+              <LogOut />
+              <span>Sign out</span>
             </button>
-          </div>
-        </aside>
 
-        <main className="main" id="main-content">
-          <div className="topbar">
-            <div className="topbar-lead">
-              <button
-                type="button"
-                className="nav-toggle"
-                onClick={() => setDrawerOpen((open) => !open)}
-                aria-expanded={drawerOpen}
-                aria-controls="sidebar"
-                aria-label="Toggle navigation"
-              >
-                ☰
-              </button>
-              <div>
-                <h1>{meta.title}</h1>
-                <div className="sub">{meta.subtitle}</div>
-              </div>
-            </div>
-
-            <div className="topbar-actions">
-              <div className="topbar-identity">
-                <div className="topbar-name">
-                  {employee ? `${employee.first_name} ${employee.last_name}` : user?.username}
-                </div>
-                <div className="topbar-role">{user?.role}</div>
-              </div>
+            <div className="sidebar-user">
               <Avatar
                 first={employee?.first_name ?? user?.username}
                 last={employee?.last_name}
                 seed={user?.username}
-                size={38}
+                size={28}
               />
+              <div className="sidebar-user-text">
+                <div className="sidebar-user-name">{displayName}</div>
+                <div className="sidebar-user-role">{user?.role}</div>
+              </div>
             </div>
           </div>
+        </aside>
 
-          <Outlet />
-        </main>
+        <div className="main">
+          <header className="topbar">
+            <button
+              type="button"
+              className="nav-toggle"
+              onClick={() => setDrawerOpen((open) => !open)}
+              aria-expanded={drawerOpen}
+              aria-controls="sidebar"
+              aria-label="Toggle navigation"
+            >
+              <Menu size={16} />
+            </button>
+
+            <div>
+              <h1>{meta.title}</h1>
+            </div>
+
+            <div className="topbar-spacer" />
+
+            <button
+              type="button"
+              className="search-trigger"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+            >
+              <Search />
+              <span>Search…</span>
+              <kbd>{isApplePlatform() ? "⌘K" : "Ctrl K"}</kbd>
+            </button>
+          </header>
+
+          <main className="page" id="main">
+            <Outlet />
+          </main>
+        </div>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   );
+}
+
+function isApplePlatform() {
+  return /Mac|iPhone|iPad/.test(navigator.platform ?? "");
+}
+
+/** How long a pending `g` waits for its second key before lapsing. */
+const CHORD_TIMEOUT_MS = 1200;
+
+/**
+ * Global shortcuts: Cmd/Ctrl-K for the palette, and `g` followed by a letter
+ * to jump between sections.
+ *
+ * Every handler ignores keystrokes aimed at a text field, so typing "g" into
+ * a search box neither swallows the character nor arms a chord.
+ */
+function useGlobalShortcuts({
+  onPalette,
+  onEscape,
+  onGoTo,
+}: {
+  onPalette: () => void;
+  onEscape: () => void;
+  onGoTo: (key: string) => void;
+}) {
+  const handlers = useRef({ onPalette, onEscape, onGoTo });
+  handlers.current = { onPalette, onEscape, onGoTo };
+
+  useEffect(() => {
+    let chordArmed = false;
+    let chordTimer = 0;
+
+    function disarm() {
+      chordArmed = false;
+      window.clearTimeout(chordTimer);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable === true;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        disarm();
+        handlers.current.onPalette();
+        return;
+      }
+
+      if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key === "Escape") {
+        disarm();
+        handlers.current.onEscape();
+        return;
+      }
+
+      if (chordArmed) {
+        disarm();
+        handlers.current.onGoTo(event.key.toLowerCase());
+        return;
+      }
+
+      if (event.key.toLowerCase() === "g") {
+        chordArmed = true;
+        // Lapse on its own, so a stray `g` cannot hijack the next keystroke
+        // minutes later.
+        chordTimer = window.setTimeout(disarm, CHORD_TIMEOUT_MS);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(chordTimer);
+    };
+  }, []);
 }

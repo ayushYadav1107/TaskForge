@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { landingFor, useAuth } from "../auth/AuthContext";
-import { FormError } from "../components/ui";
-import { AuthBrandPanel, DemoCredentials } from "./AuthBrandPanel";
+import { Field, FormError } from "../components/ui";
+import { AuthLayout, DemoAccounts } from "./AuthLayout";
 
 export function Login() {
   const { login } = useAuth();
@@ -30,69 +30,60 @@ export function Login() {
   }
 
   return (
-    <div className="auth-shell">
-      <AuthBrandPanel
-        heading={
-          <>
-            Assign work.
-            <br />
-            Track progress.
-            <br />
-            Ship on time.
-          </>
-        }
-        lede="A task and workforce platform — manage departments, employees and tasks, then watch completion move in real time."
-      />
-
-      <section className="auth-form-side">
-        <div className="auth-card">
-          <div className="auth-mobile-head">
-            <span className="logo-dot">TF</span>
-            <span>TaskForge</span>
-          </div>
-
-          <h2>Welcome back</h2>
-          <p className="sub">Sign in to your TaskForge workspace</p>
-
-          <FormError message={error} />
-
-          <form onSubmit={onSubmit} noValidate>
-            <div className="field">
-              <label htmlFor="username">Username</label>
-              <input
-                id="username"
-                autoComplete="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-
-          <p className="auth-alt">
-            New here? <Link to="/signup">Create an account</Link>
-          </p>
-
-          <DemoCredentials />
+    <AuthLayout
+      headline="Work, assigned and accounted for."
+      lede="Plan tasks, assign them to your team, and track completion without chasing status updates."
+    >
+      <div className="auth-card">
+        <div className="auth-mobile-brand">
+          <span className="brand-mark">TF</span>
+          TaskForge
         </div>
-      </section>
-    </div>
+
+        <h1>Sign in</h1>
+        <p className="auth-card-sub">Welcome back to your workspace.</p>
+
+        <FormError message={error} />
+
+        <form onSubmit={onSubmit} noValidate>
+          <Field label="Username" htmlFor="username">
+            <input
+              id="username"
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+              autoFocus
+            />
+          </Field>
+
+          <Field label="Password" htmlFor="password">
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </Field>
+
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={submitting}>
+            {submitting ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="auth-alt">
+          New here? <Link to="/signup">Create an account</Link>
+        </p>
+
+        <DemoAccounts
+          onPick={(user, pass) => {
+            setUsername(user);
+            setPassword(pass);
+          }}
+        />
+      </div>
+    </AuthLayout>
   );
 }

@@ -1,0 +1,232 @@
+/* ==========================================================================
+   Design tokens
+   --------------------------------------------------------------------------
+   Neutral-first. The interface is built almost entirely from greys and
+   1px borders; the accent appears only on focus rings, the active nav row,
+   and primary actions. Colour that appears everywhere stops meaning anything,
+   which is what made the previous palette read as decoration rather than
+   signal.
+   ========================================================================== */
+
+:root {
+  /* --- Neutral ramp -----------------------------------------------------
+     Very slightly cool. A pure grey looks dead next to an indigo accent. */
+  --grey-0: #ffffff;
+  --grey-25: #fcfcfd;
+  --grey-50: #f8f9fb;
+  --grey-100: #f1f2f5;
+  --grey-150: #e9ebef;
+  --grey-200: #e1e4e9;
+  --grey-300: #cdd1d9;
+  --grey-400: #a0a6b3;
+  --grey-500: #767d8c;
+  --grey-600: #5a6170;
+  --grey-700: #414754;
+  --grey-800: #282d38;
+  --grey-900: #181c24;
+  --grey-950: #0e1116;
+
+  /* --- Accent ---------------------------------------------------------- */
+  --accent-50: #eef1ff;
+  --accent-100: #e0e5ff;
+  --accent-200: #c6cfff;
+  --accent-400: #8b95f7;
+  --accent-500: #6366f1;
+  --accent-600: #5457e5;
+  --accent-700: #4447c4;
+
+  /* --- Status ----------------------------------------------------------
+     Muted rather than saturated. A status pill sits next to body text all
+     day; a full-strength red vibrates against it. */
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --red-500: #e5484d;
+  --red-600: #ce2c31;
+  --red-700: #a51f23;
+
+  --amber-50: #fff8eb;
+  --amber-100: #ffefc9;
+  --amber-500: #f5a623;
+  --amber-700: #97600b;
+
+  --green-50: #eefbf3;
+  --green-100: #d3f3e0;
+  --green-500: #30a46c;
+  --green-700: #1c7a4d;
+
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-500: #3b82f6;
+  --blue-700: #1d4ed8;
+
+  /* --- Semantic surfaces ------------------------------------------------ */
+  --bg: var(--grey-50);
+  --surface: var(--grey-0);
+  --surface-raised: var(--grey-0);
+  --surface-sunken: var(--grey-100);
+  --surface-hover: var(--grey-100);
+  --surface-active: var(--grey-150);
+
+  --border: var(--grey-200);
+  --border-subtle: var(--grey-150);
+  --border-strong: var(--grey-300);
+
+  --text: var(--grey-900);
+  --text-secondary: var(--grey-600);
+  --text-muted: var(--grey-500);
+  --text-faint: var(--grey-400);
+  --text-on-accent: #ffffff;
+
+  --accent: var(--accent-500);
+  --accent-hover: var(--accent-600);
+  --accent-text: var(--accent-700);
+  --accent-bg: var(--accent-50);
+  --accent-border: var(--accent-200);
+
+  --danger: var(--red-600);
+  --danger-bg: var(--red-50);
+  --danger-border: var(--red-100);
+
+  /* --- Type ------------------------------------------------------------
+     A real scale. The previous UI put nearly everything between 13 and 15px,
+     which is why no screen had a focal point. */
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-base: 13.5px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* Optical correction: large text needs negative tracking to avoid looking
+     loose, small text needs positive tracking to stay legible. */
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.03em;
+  --tracking-wide: 0.04em;
+  --tracking-widest: 0.08em;
+
+  /* --- Space -----------------------------------------------------------
+     4px base grid. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Radii -----------------------------------------------------------
+     Tight. Large radii read as "friendly consumer app"; a work tool wants
+     crisp corners. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* --- Elevation -------------------------------------------------------
+     Borders do the separating. Shadows are reserved for things that genuinely
+     float above the page: menus, dialogs, popovers. */
+  --shadow-xs: 0 1px 2px rgba(16, 20, 28, 0.04);
+  --shadow-sm: 0 1px 3px rgba(16, 20, 28, 0.06), 0 1px 2px rgba(16, 20, 28, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(16, 20, 28, 0.08), 0 2px 6px -2px rgba(16, 20, 28, 0.05);
+  --shadow-lg: 0 12px 32px -8px rgba(16, 20, 28, 0.14), 0 4px 12px -4px rgba(16, 20, 28, 0.08);
+  --shadow-xl: 0 24px 56px -12px rgba(16, 20, 28, 0.22);
+
+  --ring: 0 0 0 3px var(--accent-100);
+  --ring-danger: 0 0 0 3px var(--red-100);
+
+  /* --- Motion ----------------------------------------------------------
+     Short and unshowy. Anything over ~200ms in a tool feels like lag. */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 80ms;
+  --duration: 140ms;
+  --duration-slow: 220ms;
+
+  /* --- Layout ---------------------------------------------------------- */
+  --sidebar-w: 224px;
+  --topbar-h: 52px;
+  --content-max: 1440px;
+
+  color-scheme: light;
+}
+
+/* ==========================================================================
+   Dark theme
+   Near-black rather than navy. A tinted dark surface fights every status
+   colour placed on it.
+   ========================================================================== */
+
+:root[data-theme="dark"] {
+  --bg: #0a0b0d;
+  --surface: #131519;
+  --surface-raised: #191c21;
+  --surface-sunken: #0e1013;
+  --surface-hover: #1d2026;
+  --surface-active: #23272e;
+
+  --border: #23262d;
+  --border-subtle: #1b1e23;
+  --border-strong: #32363f;
+
+  --text: #eceef2;
+  --text-secondary: #a8aeba;
+  --text-muted: #838a97;
+  --text-faint: #5f6673;
+
+  --accent: #7c82f5;
+  --accent-hover: #8f94f8;
+  --accent-text: #b4b8fb;
+  --accent-bg: #1a1c33;
+  --accent-border: #2e3159;
+
+  --danger: #f06d70;
+  --danger-bg: #2a1517;
+  --danger-border: #451f22;
+
+  --red-50: #2a1517;
+  --red-100: #451f22;
+  --red-500: #f06d70;
+  --red-700: #f9a2a4;
+
+  --amber-50: #2a2010;
+  --amber-100: #443318;
+  --amber-500: #f5b544;
+  --amber-700: #fbd08a;
+
+  --green-50: #0f2419;
+  --green-100: #1a3d2a;
+  --green-500: #43c07f;
+  --green-700: #85dcac;
+
+  --blue-50: #111f33;
+  --blue-100: #1b3250;
+  --blue-500: #5a9bfa;
+  --blue-700: #9cc5fd;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 24px 56px -12px rgba(0, 0, 0, 0.7);
+
+  --ring: 0 0 0 3px rgba(124, 130, 245, 0.25);
+  --ring-danger: 0 0 0 3px rgba(240, 109, 112, 0.22);
+
+  color-scheme: dark;
+}

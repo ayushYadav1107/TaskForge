@@ -20,3 +20,4 @@ htmlcov/
 # Local databases
 *.db
 *.sqlite3
+*.tsbuildinfo

@@ -143,11 +143,11 @@ Alembic is the source of truth now.
 
 ## Tests
 
-92 tests, no database server and no browser required.
+96 tests, no database server and no browser required.
 
 ```bash
 cd backend && pytest -q          # 69 — auth, RBAC, CSRF, deploy config
-cd web && npm run test           # 23 — API client, formatting
+cd web && npm run test           # 27 — API client, session query, formatting
 ```
 
 The backend suite runs on in-memory SQLite with a fresh schema per test. The
@@ -183,6 +183,30 @@ immediately instead of presenting a signup form with an empty department list.
 
 `/api/healthz` is a pure liveness check; `/api/readyz` round-trips a query and
 returns 503 when the database is unreachable.
+
+---
+
+## Interface
+
+The UI is built on a small design-token layer (`web/src/styles/tokens.css`)
+rather than ad-hoc values, so light and dark themes, spacing and type all come
+from one place.
+
+- **Neutral-first palette.** The interface is greys and 1px borders; the accent
+  appears only on focus rings, the active nav row and primary buttons. Status
+  is carried by a 6px coloured dot rather than a saturated pill, so a column of
+  them stays scannable.
+- **A real type scale** with tabular numerals, so figures line up column to
+  column and each screen has one focal point instead of ten competing ones.
+- **Borders over shadows.** Elevation is reserved for things that genuinely
+  float — dialogs, the palette, toasts.
+- **Command palette** at <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd>, with
+  subsequence matching, and `g`-then-key navigation chords (`g` `t` for Tasks).
+- **Lucide** icon set, self-hosted **Inter** — the font ships with the bundle,
+  so the strict CSP needs no `font-src` exception and there is no third-party
+  request on first paint.
+- Focus-trapped dialogs, a skip link, `aria-live` toasts, sortable table
+  headers as real buttons, and `prefers-reduced-motion` honoured throughout.
 
 ---
 
@@ -252,9 +276,10 @@ web/
   src/
     api/           typed client + TanStack Query hooks
     auth/          session context and route guards
-    components/    Modal, Toast, ConfirmDialog, UI primitives
+    components/    Modal, Toast, ConfirmDialog, CommandPalette, primitives
+    layout/        app shell + single source of truth for navigation
     pages/         one file per screen
-    styles/        design system
+    styles/        tokens.css, base.css, components.css
 Dockerfile         two-stage build
 render.yaml        one-click Render blueprint
 ```

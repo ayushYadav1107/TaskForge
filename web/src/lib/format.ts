@@ -4,9 +4,14 @@ export function initials(first?: string | null, last?: string | null) {
   return `${(first ?? "?").charAt(0)}${(last ?? "").charAt(0)}`.toUpperCase() || "?";
 }
 
+/** Maps a status onto a class-safe slug, e.g. "In Progress" -> InProgress. */
+export function statusSlug(value?: string | null) {
+  return String(value ?? "").replace(/\s+/g, "");
+}
+
 /** Maps a status or priority onto its badge class, e.g. "In Progress" -> badge-InProgress. */
 export function badgeClass(value?: string | null) {
-  return `badge-${String(value ?? "").replace(/\s+/g, "")}`;
+  return `badge-${statusSlug(value)}`;
 }
 
 export function relativeTime(iso?: string | null) {

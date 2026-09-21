@@ -1,3 +1,4 @@
+import { AlertCircle, Check, Info } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -16,8 +17,13 @@ interface Toast {
   kind: ToastKind;
 }
 
-const ICONS: Record<ToastKind, string> = { success: "✓", error: "!", info: "i" };
-const DISMISS_AFTER_MS = 3600;
+const ICONS: Record<ToastKind, ReactNode> = {
+  success: <Check />,
+  error: <AlertCircle />,
+  info: <Info />,
+};
+
+const DISMISS_AFTER_MS = 3400;
 
 const ToastContext = createContext<((message: string, kind?: ToastKind) => void) | null>(null);
 
@@ -39,12 +45,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* aria-live so a screen reader announces the result of an action that
-          otherwise only changes colour somewhere else on the page. */}
+      {/* aria-live so a screen reader announces the result of an action whose
+          only other feedback is a colour change elsewhere on the page. */}
       <div className="toast-host" role="status" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast--${toast.kind} toast--visible`}>
-            <span className="toast-icon">{ICONS[toast.kind]}</span>
+          <div key={toast.id} className={`toast toast--${toast.kind}`}>
+            {ICONS[toast.kind]}
             <span>{toast.message}</span>
           </div>
         ))}

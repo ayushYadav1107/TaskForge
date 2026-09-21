@@ -1,63 +1,108 @@
+import { Building2, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
 import { useCreateDepartment, useDepartments, useEmployees } from "../api/hooks";
 import { Modal } from "../components/Modal";
 import { useToast } from "../components/Toast";
-import { Card, EmptyState, Field, FormError, SkeletonLines } from "../components/ui";
+import { Avatar, Empty, Field, FormError, Panel, SkeletonRows } from "../components/ui";
 import { pluralise } from "../lib/format";
-
-const ICONS = ["◆", "▲", "●", "■", "★", "▼"];
 
 export function Departments() {
   const { data: departments, isLoading } = useDepartments();
   const { data: employees } = useEmployees();
   const [adding, setAdding] = useState(false);
 
-  const headcount = new Map<number, number>();
+  const members = new Map<number, typeof employees extends undefined ? never : NonNullable<typeof employees>>();
   for (const employee of employees ?? []) {
-    headcount.set(employee.department_id, (headcount.get(employee.department_id) ?? 0) + 1);
+    const list = members.get(employee.department_id) ?? [];
+    list.push(employee);
+    members.set(employee.department_id, list);
   }
 
   return (
     <>
-      <Card
+      <Panel
+        flush
         title="Departments"
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
+            <Plus />
             New department
           </button>
         }
       >
         {isLoading ? (
-          <SkeletonLines count={3} />
+          <SkeletonRows count={4} />
         ) : (departments ?? []).length === 0 ? (
-          <EmptyState title="No departments yet" message="Create one to start grouping your team." />
+          <Empty
+            icon={<Building2 />}
+            title="No departments yet"
+            message="Create one to start grouping your team."
+          />
         ) : (
-          <div className="dept-grid">
-            {(departments ?? []).map((department, index) => (
-              <article key={department.id} className="dept-card animate-in" style={{ ["--i" as string]: index }}>
-                <span className="dept-icon" aria-hidden="true">
-                  {ICONS[index % ICONS.length]}
-                </span>
-                <h3>{department.name}</h3>
-                <p>{department.description || "No description."}</p>
-                <div className="dept-count">{pluralise(headcount.get(department.id) ?? 0, "person", "people")}</div>
-              </article>
-            ))}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Department</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">People</th>
+                  <th scope="col">Members</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(departments ?? []).map((department) => {
+                  const people = members.get(department.id) ?? [];
+                  return (
+                    <tr key={department.id}>
+                      <td>
+                        <div className="cell-person">
+                          <span className="empty-icon" style={{ width: 28, height: 28, marginBottom: 0 }}>
+                            <Building2 size={14} />
+                          </span>
+                          <span className="cell-primary">{department.name}</span>
+                        </div>
+                      </td>
+                      <td className="muted">{department.description || "—"}</td>
+                      <td className="cell-numeric">{pluralise(people.length, "person", "people")}</td>
+                      <td>
+                        <span className="avatar-stack">
+                          {people.slice(0, 5).map((person) => (
+                            <Avatar
+                              key={person.id}
+                              first={person.first_name}
+                              last={person.last_name}
+                              seed={person.email}
+                              size={22}
+                            />
+                          ))}
+                          {people.length > 5 ? (
+                            <span className="avatar-more">+{people.length - 5}</span>
+                          ) : null}
+                          {people.length === 0 ? <span className="muted text-sm">—</span> : null}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </Card>
+      </Panel>
 
-      <DepartmentModal open={adding} onClose={() => setAdding(false)} />
+      <DepartmentDialog open={adding} onClose={() => setAdding(false)} />
     </>
   );
 }
 
-function DepartmentModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function DepartmentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createDepartment = useCreateDepartment();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
+
+  if (!open) return null;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,22 +124,26 @@ function DepartmentModal({ open, onClose }: { open: boolean; onClose: () => void
     );
   }
 
-  if (!open) return null;
-
   return (
     <Modal open title="New department" onClose={onClose} width={420}>
       <form onSubmit={onSubmit}>
-        <FormError message={error} />
+        <div className="dialog-body">
+          <FormError message={error} />
 
-        <Field label="Name" htmlFor="dept-name">
-          <input id="dept-name" name="name" required autoFocus />
-        </Field>
+          <Field label="Name" htmlFor="dept-name">
+            <input id="dept-name" name="name" required autoFocus placeholder="Engineering" />
+          </Field>
 
-        <Field label="Description" htmlFor="dept-description">
-          <textarea id="dept-description" name="description" />
-        </Field>
+          <Field label="Description" htmlFor="dept-description">
+            <textarea
+              id="dept-description"
+              name="description"
+              placeholder="What does this team do?"
+            />
+          </Field>
+        </div>
 
-        <div className="modal-actions">
+        <div className="dialog-footer">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>

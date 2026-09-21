@@ -5,11 +5,14 @@ const FOCUSABLE =
 
 interface ModalProps {
   open: boolean;
-  title: string;
+  title?: string;
   subtitle?: string;
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  /** Drops the chrome so a bare surface (the command palette) can use the same shell. */
+  bare?: boolean;
+  className?: string;
 }
 
 /**
@@ -19,7 +22,16 @@ interface ModalProps {
  * behind, which for a keyboard or screen-reader user means the dialog is
  * effectively unusable even though it looks fine.
  */
-export function Modal({ open, title, subtitle, onClose, children, width = 520 }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  subtitle,
+  onClose,
+  children,
+  width = 520,
+  bare = false,
+  className = "",
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -33,6 +45,7 @@ export function Modal({ open, title, subtitle, onClose, children, width = 520 }:
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        event.stopPropagation();
         onClose();
         return;
       }
@@ -43,12 +56,11 @@ export function Modal({ open, title, subtitle, onClose, children, width = 520 }:
 
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
 
-      if (event.shiftKey && active === first) {
+      if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
+      } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
         first.focus();
       }
@@ -68,22 +80,31 @@ export function Modal({ open, title, subtitle, onClose, children, width = 520 }:
 
   return (
     <div
-      className="modal-overlay"
+      className="overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <div
-        className="modal"
+        className={`dialog ${className}`.trim()}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : "Dialog"}
         style={{ maxWidth: width }}
       >
-        <h2 id={titleId}>{title}</h2>
-        {subtitle ? <p className="modal-sub">{subtitle}</p> : null}
-        {children}
+        {bare ? (
+          children
+        ) : (
+          <>
+            <header className="dialog-header">
+              <h2 id={titleId}>{title}</h2>
+              {subtitle ? <p className="dialog-sub">{subtitle}</p> : null}
+            </header>
+            {children}
+          </>
+        )}
       </div>
     </div>
   );

@@ -6,8 +6,12 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ApiError } from "./api/client";
-import "./styles/app.css";
-import "./styles/spa.css";
+// Self-hosted so the strict CSP needs no font-src exception and the font
+// is not a third-party request on first paint.
+import "@fontsource-variable/inter";
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/components.css";
 
 const queryClient = new QueryClient({
   // A session can expire while the tab sits open. Catching the resulting 401

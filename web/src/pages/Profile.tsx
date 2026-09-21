@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { ApiError, api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/Toast";
-import { Avatar, Card, Field, FormError } from "../components/ui";
+import { Avatar, Field, FormError, Panel, RoleBadge } from "../components/ui";
 import { relativeTime } from "../lib/format";
 
 export function Profile() {
@@ -43,18 +43,27 @@ export function Profile() {
   }
 
   return (
-    <div className="two-column">
-      <Card title="Your details" index={0}>
-        <div className="profile-head">
+    <div className="grid-2">
+      <Panel title="Your details">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-4)",
+            marginBottom: "var(--space-5)",
+          }}
+        >
           <Avatar
             first={employee?.first_name ?? user?.username}
             last={employee?.last_name}
             seed={user?.username}
-            size={64}
+            size={52}
           />
           <div>
-            <h3>{employee ? `${employee.first_name} ${employee.last_name}` : user?.username}</h3>
-            <p className="cell-sub">{employee?.position || user?.role}</p>
+            <h3 style={{ fontSize: "var(--text-md)" }}>
+              {employee ? `${employee.first_name} ${employee.last_name}` : user?.username}
+            </h3>
+            <p className="cell-secondary">{employee?.position || user?.role}</p>
           </div>
         </div>
 
@@ -66,7 +75,7 @@ export function Profile() {
           <div>
             <dt>Role</dt>
             <dd>
-              <span className={`badge badge-role-${user?.role}`}>{user?.role}</span>
+              <RoleBadge role={user?.role} />
             </dd>
           </div>
           {employee ? (
@@ -96,33 +105,51 @@ export function Profile() {
             <dd>{user?.last_login_at ? relativeTime(user.last_login_at) : "This session"}</dd>
           </div>
         </dl>
-      </Card>
+      </Panel>
 
-      <Card title="Change password" index={1}>
-        <form onSubmit={changePassword} style={{ maxWidth: 380 }}>
+      <Panel title="Change password">
+        <form onSubmit={changePassword} style={{ maxWidth: 340 }}>
           <FormError message={error} />
 
           <Field label="Current password" htmlFor="old-password">
-            <input id="old-password" name="oldPassword" type="password" autoComplete="current-password" required />
+            <input
+              id="old-password"
+              name="oldPassword"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
           </Field>
 
           <Field
             label="New password"
             htmlFor="new-password"
-            hint="At least 8 characters, with a letter and a number."
+            hint="8+ characters, with a letter and a number."
           >
-            <input id="new-password" name="newPassword" type="password" autoComplete="new-password" required />
+            <input
+              id="new-password"
+              name="newPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+            />
           </Field>
 
           <Field label="Confirm new password" htmlFor="confirm-password">
-            <input id="confirm-password" name="confirmPassword" type="password" autoComplete="new-password" required />
+            <input
+              id="confirm-password"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+            />
           </Field>
 
           <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? "Updating…" : "Update password"}
           </button>
         </form>
-      </Card>
+      </Panel>
     </div>
   );
 }
