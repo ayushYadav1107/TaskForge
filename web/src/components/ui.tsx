@@ -1,7 +1,7 @@
 import { AlertCircle, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { Status } from "../api/types";
+import type { Role, Status } from "../api/types";
 import { avatarStyle, initials, statusSlug } from "../lib/format";
 
 /* --------------------------------- Panel ---------------------------------- */
@@ -77,9 +77,19 @@ export function PriorityBadge({ priority }: { priority?: string | null }) {
   return <span className={`badge badge-priority badge-${priority}`}>{priority}</span>;
 }
 
-export function RoleBadge({ role }: { role?: string | null }) {
+export const ROLE_LABELS: Record<Role, string> = {
+  super_admin: "Super admin",
+  admin: "Admin",
+  hr: "HR",
+  manager: "Manager",
+  team_lead: "Team lead",
+  employee: "Employee",
+  auditor: "Auditor",
+};
+
+export function RoleBadge({ role }: { role?: Role | null }) {
   if (!role) return null;
-  return <span className={`badge badge-role-${role}`}>{role}</span>;
+  return <span className={`badge role-chip role-${role}`}>{ROLE_LABELS[role] ?? role}</span>;
 }
 
 /* --------------------------------- Avatar --------------------------------- */

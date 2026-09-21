@@ -25,9 +25,6 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Inter's contextual alternates and tabular figures. `cv11` gives the
-     single-storey "a"-less lowercase g/l shapes that keep dense UI legible. */
-  font-feature-settings: "cv11", "ss01";
   font-variant-ligatures: contextual;
 }
 

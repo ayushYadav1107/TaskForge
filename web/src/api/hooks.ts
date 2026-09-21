@@ -7,6 +7,8 @@ import type {
   DashboardStats,
   Department,
   Employee,
+  Role,
+  RoleMatrix,
   Task,
   User,
 } from "./types";
@@ -20,6 +22,7 @@ export const keys = {
   departments: ["departments"] as const,
   stats: ["dashboard", "stats"] as const,
   activity: ["dashboard", "activity"] as const,
+  roleMatrix: ["admin", "roles"] as const,
 };
 
 /**
@@ -177,6 +180,31 @@ export function useDeleteEmployee() {
   return useMutation({
     mutationFn: (id: number) => api.del(`/api/employees/${id}`),
     onSuccess: refresh,
+  });
+}
+
+export function useChangeRole() {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: number; role: Role }) =>
+      api.put<{ employee: Employee }>(`/api/employees/${id}/role`, { role }),
+    onSuccess: refresh,
+  });
+}
+
+export function useUnlockEmployee() {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: (id: number) => api.post<{ employee: Employee }>(`/api/employees/${id}/unlock`),
+    onSuccess: refresh,
+  });
+}
+
+export function useRoleMatrix() {
+  return useQuery({
+    queryKey: keys.roleMatrix,
+    queryFn: () => api.get<RoleMatrix>("/api/admin/roles"),
+    staleTime: Infinity,
   });
 }
 

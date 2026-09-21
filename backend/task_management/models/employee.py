@@ -40,4 +40,8 @@ class Employee(db.Model):
             "department_name": self.department.name if self.department else None,
             "username": self.user.username if self.user else None,
             "role": self.user.role if self.user else None,
+            "is_locked": self.user.is_locked if self.user else False,
+            "last_login_at": (
+                self.user.last_login_at.isoformat() if self.user and self.user.last_login_at else None
+            ),
         }

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from ..auth_decorators import roles_required
+from ..auth_decorators import permission_required
 from ..extensions import db
 from ..models import Department, Employee, Task, TaskAssignment
 from ..services import activity_service
@@ -11,7 +11,7 @@ STATUSES = ["Pending", "In Progress", "Completed", "On Hold", "Cancelled"]
 
 
 @dashboard_bp.route("/stats", methods=["GET"])
-@roles_required("admin", "manager")
+@permission_required("dashboard.view")
 def stats():
     total_tasks = Task.query.filter_by(is_deleted=False).count()
     total_employees = Employee.query.filter_by(is_active=True).count()
@@ -45,7 +45,7 @@ def stats():
 
 
 @dashboard_bp.route("/activity", methods=["GET"])
-@roles_required("admin")
+@permission_required("audit.view")
 def activity():
     limit = min(request.args.get("limit", default=50, type=int) or 50, 200)
     return jsonify({"activity": activity_service.list_recent(limit)})

@@ -21,6 +21,7 @@ import {
   useTasks,
   useUpdateAssignment,
 } from "../api/hooks";
+import { useAuth } from "../auth/AuthContext";
 import { PRIORITIES, STATUSES, type Assignment, type Priority, type Status, type Task } from "../api/types";
 import { useConfirm } from "../components/ConfirmDialog";
 import { Modal } from "../components/Modal";
@@ -276,6 +277,7 @@ function TaskTable({
   onAssign: (task: Task) => void;
   onNew: () => void;
 }) {
+  const { can } = useAuth();
   const deleteTask = useDeleteTask();
   const confirm = useConfirm();
   const toast = useToast();
@@ -416,14 +418,16 @@ function TaskTable({
                   >
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-subtle btn-sm btn-icon"
-                    onClick={() => remove(task)}
-                    aria-label={`Delete ${task.title}`}
-                  >
-                    <Trash2 />
-                  </button>
+                  {can("tasks.delete") ? (
+                    <button
+                      type="button"
+                      className="btn btn-subtle btn-sm btn-icon"
+                      onClick={() => remove(task)}
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      <Trash2 />
+                    </button>
+                  ) : null}
                 </div>
               </td>
             </tr>

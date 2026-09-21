@@ -8,10 +8,13 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { ApiError } from "./api/client";
 // Self-hosted so the strict CSP needs no font-src exception and the font
 // is not a third-party request on first paint.
-import "@fontsource-variable/inter";
+import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/jetbrains-mono";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
+import "./styles/lively.css";
 
 const queryClient = new QueryClient({
   // A session can expire while the tab sits open. Catching the resulting 401

@@ -1,5 +1,7 @@
 import {
   CheckSquare,
+  KeyRound,
+  ShieldCheck,
   Building2,
   History,
   LayoutGrid,
@@ -9,14 +11,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { Permission } from "../api/types";
+
 export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   /** Single-key shortcut, pressed after `g` (g-then-o for Overview, vim style). */
   shortcut?: string;
-  managerOnly?: boolean;
-  adminOnly?: boolean;
+  /** Hidden unless the signed-in user holds this permission. */
+  permission?: Permission;
+  group: "Console" | "Workspace";
   title: string;
   subtitle: string;
 }
@@ -24,11 +29,32 @@ export interface NavItem {
 /** One source of truth for the sidebar, the command palette, and page titles. */
 export const NAV_ITEMS: NavItem[] = [
   {
+    to: "/admin",
+    label: "Console · People",
+    icon: ShieldCheck,
+    shortcut: "G C",
+    permission: "console.access",
+    group: "Console",
+    title: "Admin console",
+    subtitle: "Accounts, roles and access across the workspace",
+  },
+  {
+    to: "/admin/roles",
+    label: "Roles & permissions",
+    icon: KeyRound,
+    shortcut: "G R",
+    permission: "console.access",
+    group: "Console",
+    title: "Roles & permissions",
+    subtitle: "Who can do what, and how far their reach goes",
+  },
+  {
     to: "/overview",
     label: "Overview",
     icon: LayoutGrid,
     shortcut: "G O",
-    managerOnly: true,
+    permission: "dashboard.view",
+    group: "Workspace",
     title: "Overview",
     subtitle: "How the workspace is tracking",
   },
@@ -37,7 +63,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Tasks",
     icon: ListTodo,
     shortcut: "G T",
-    managerOnly: true,
+    permission: "tasks.manage",
+    group: "Workspace",
     title: "Tasks",
     subtitle: "Create work and assign it",
   },
@@ -46,7 +73,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: "People",
     icon: Users,
     shortcut: "G P",
-    managerOnly: true,
+    permission: "people.view",
+    group: "Workspace",
     title: "People",
     subtitle: "Everyone with an account",
   },
@@ -55,7 +83,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Departments",
     icon: Building2,
     shortcut: "G D",
-    managerOnly: true,
+    permission: "people.view",
+    group: "Workspace",
     title: "Departments",
     subtitle: "How the organisation is divided",
   },
@@ -64,7 +93,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Audit log",
     icon: History,
     shortcut: "G A",
-    adminOnly: true,
+    permission: "audit.view",
+    group: "Workspace",
     title: "Audit log",
     subtitle: "Every change, who made it, and when",
   },
@@ -73,6 +103,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "My tasks",
     icon: CheckSquare,
     shortcut: "G M",
+    group: "Workspace",
     title: "My tasks",
     subtitle: "Everything currently on your plate",
   },
@@ -80,6 +111,7 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/profile",
     label: "Profile",
     icon: User,
+    group: "Workspace",
     title: "Profile",
     subtitle: "Your account details and password",
   },

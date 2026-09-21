@@ -6,6 +6,9 @@ import { ConfirmProvider } from "./components/ConfirmDialog";
 import { ToastProvider } from "./components/Toast";
 import { AppShell } from "./layout/AppShell";
 import { Activity } from "./pages/Activity";
+import { AdminLogin } from "./pages/AdminLogin";
+import { AdminPeople } from "./pages/AdminPeople";
+import { AdminRoles } from "./pages/AdminRoles";
 import { Departments } from "./pages/Departments";
 import { Employees } from "./pages/Employees";
 import { Login } from "./pages/Login";
@@ -27,29 +30,30 @@ export function App() {
               <Route element={<PublicOnlyRoute />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
               </Route>
 
-              {/* Manager-and-above screens. The same rules are enforced on the
-                  server; these routes only keep the UI honest. */}
-              <Route element={<ProtectedRoute roles={["admin", "manager"]} />}>
-                <Route element={<AppShell />}>
-                  <Route path="/overview" element={<Overview />} />
-                  <Route path="/tasks" element={<Tasks />} />
-                  <Route path="/employees" element={<Employees />} />
-                  <Route path="/departments" element={<Departments />} />
-                </Route>
-              </Route>
-
-              <Route element={<ProtectedRoute roles={["admin"]} />}>
-                <Route element={<AppShell />}>
-                  <Route path="/activity" element={<Activity />} />
-                </Route>
-              </Route>
-
+              {/* Each screen is gated by the permission it needs. The same
+                  rules are enforced on the server; these only keep the UI honest. */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>
-                  <Route path="/my-tasks" element={<MyTasks />} />
-                  <Route path="/profile" element={<Profile />} />
+                  {(
+                    [
+                      ["/admin", "console.access", <AdminPeople />],
+                      ["/admin/roles", "console.access", <AdminRoles />],
+                      ["/overview", "dashboard.view", <Overview />],
+                      ["/tasks", "tasks.manage", <Tasks />],
+                      ["/employees", "people.view", <Employees />],
+                      ["/departments", "people.view", <Departments />],
+                      ["/activity", "audit.view", <Activity />],
+                      ["/my-tasks", undefined, <MyTasks />],
+                      ["/profile", undefined, <Profile />],
+                    ] as const
+                  ).map(([path, permission, element]) => (
+                    <Route key={path} element={<ProtectedRoute permission={permission} />}>
+                      <Route path={path} element={element} />
+                    </Route>
+                  ))}
                 </Route>
               </Route>
 

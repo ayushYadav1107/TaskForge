@@ -1,6 +1,6 @@
 from flask import Blueprint, g, jsonify, request
 
-from ..auth_decorators import login_required, roles_required
+from ..auth_decorators import login_required, permission_required
 from ..services import employee_service
 from ..services.errors import EmployeeError
 
@@ -15,7 +15,7 @@ def list_departments():
 
 
 @department_bp.route("", methods=["POST"])
-@roles_required("admin", "manager")
+@permission_required("departments.manage")
 def create_department():
     try:
         department = employee_service.create_department(request.get_json(silent=True) or {}, g.current_user.id)

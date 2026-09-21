@@ -1,4 +1,5 @@
 def register_routes(app):
+    from .admin import admin_bp
     from .assignment import assignment_bp
     from .auth import auth_bp
     from .dashboard import dashboard_bp
@@ -14,3 +15,4 @@ def register_routes(app):
     app.register_blueprint(department_bp, url_prefix="/api/departments")
     app.register_blueprint(assignment_bp, url_prefix="/api/assignments")
     app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")

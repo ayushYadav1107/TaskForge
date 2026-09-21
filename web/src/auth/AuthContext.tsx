@@ -3,15 +3,16 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import { keys, useMe } from "../api/hooks";
-import type { Role, User } from "../api/types";
+import type { Permission, User } from "../api/types";
 
 interface AuthValue {
   user: User | null;
   isLoading: boolean;
-  /** True for admin and manager — the roles that own the backlog. */
-  canManage: boolean;
-  isAdmin: boolean;
+  /** Whether the signed-in user holds a permission. The server decides; this
+   *  only reads the list it sent on /me. */
+  can: (permission: Permission) => boolean;
   login: (username: string, password: string) => Promise<User>;
+  adminLogin: (username: string, password: string) => Promise<User>;
   register: (fields: Record<string, unknown>) => Promise<User>;
   logout: () => Promise<void>;
 }
@@ -33,16 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthValue>(() => {
-    const role: Role | undefined = user?.role;
+    const signIn = (path: string) => (username: string, password: string) =>
+      api.post<{ user: User }>(path, { username, password }).then((r) => adopt(r.user));
+
     return {
       user: user ?? null,
       isLoading,
-      canManage: role === "admin" || role === "manager",
-      isAdmin: role === "admin",
-      login: (username, password) =>
-        api
-          .post<{ user: User }>("/api/auth/login", { username, password })
-          .then((r) => adopt(r.user)),
+      can: (permission) => user?.permissions?.includes(permission) ?? false,
+      login: signIn("/api/auth/login"),
+      adminLogin: signIn("/api/auth/admin/login"),
       register: (fields) =>
         api.post<{ user: User }>("/api/auth/register", fields).then((r) => adopt(r.user)),
       logout: async () => {
@@ -71,7 +71,10 @@ export function useAuth() {
   return context;
 }
 
-/** Where a given role lands after signing in. */
-export function landingFor(user: Pick<User, "role">) {
-  return user.role === "employee" ? "/my-tasks" : "/overview";
+/** Where a given user lands after signing in. */
+export function landingFor(user: Pick<User, "permissions">) {
+  const has = (permission: Permission) => user.permissions?.includes(permission);
+  if (has("console.access")) return "/admin";
+  if (has("dashboard.view")) return "/overview";
+  return "/my-tasks";
 }

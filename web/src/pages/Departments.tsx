@@ -3,12 +3,14 @@ import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
 import { useCreateDepartment, useDepartments, useEmployees } from "../api/hooks";
+import { useAuth } from "../auth/AuthContext";
 import { Modal } from "../components/Modal";
 import { useToast } from "../components/Toast";
 import { Avatar, Empty, Field, FormError, Panel, SkeletonRows } from "../components/ui";
 import { pluralise } from "../lib/format";
 
 export function Departments() {
+  const { can } = useAuth();
   const { data: departments, isLoading } = useDepartments();
   const { data: employees } = useEmployees();
   const [adding, setAdding] = useState(false);
@@ -26,10 +28,12 @@ export function Departments() {
         flush
         title="Departments"
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
-            <Plus />
-            New department
-          </button>
+          can("departments.manage") ? (
+            <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
+              <Plus />
+              New department
+            </button>
+          ) : null
         }
       >
         {isLoading ? (

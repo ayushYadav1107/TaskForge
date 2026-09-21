@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 
 from ..extensions import db
-
-ROLES = ("admin", "manager", "employee")
+from ..permissions import ROLES, grantable_roles, permissions_for
 
 
 class User(db.Model):
@@ -54,4 +53,7 @@ class User(db.Model):
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat(),
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
+            "is_locked": self.is_locked,
+            "permissions": permissions_for(self.role),
+            "grantable_roles": grantable_roles(self.role),
         }

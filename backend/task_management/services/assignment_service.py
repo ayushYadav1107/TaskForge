@@ -90,23 +90,25 @@ def get_assignments_for_employee(employee_id):
     return [a.to_dict_with_task() for a in assignments]
 
 
-def get_assignments_for_task(task_id):
-    assignments = (
-        TaskAssignment.query.options(joinedload(TaskAssignment.employee))
-        .filter_by(task_id=task_id)
-        .all()
+def _in_department(query, department_id):
+    if department_id is None:
+        return query
+    return query.join(Employee, TaskAssignment.employee_id == Employee.id).filter(
+        Employee.department_id == department_id
     )
+
+
+def get_assignments_for_task(task_id, department_id=None):
+    query = TaskAssignment.query.options(joinedload(TaskAssignment.employee)).filter_by(task_id=task_id)
+    assignments = _in_department(query, department_id).all()
     return [a.to_dict_with_employee() for a in assignments]
 
 
-def list_all_assignments():
-    assignments = (
-        TaskAssignment.query.options(
-            joinedload(TaskAssignment.task), joinedload(TaskAssignment.employee)
-        )
-        .order_by(TaskAssignment.assigned_at.desc())
-        .all()
+def list_all_assignments(department_id=None):
+    query = TaskAssignment.query.options(
+        joinedload(TaskAssignment.task), joinedload(TaskAssignment.employee)
     )
+    assignments = _in_department(query, department_id).order_by(TaskAssignment.assigned_at.desc()).all()
     results = []
     for a in assignments:
         data = a.to_dict_with_employee()

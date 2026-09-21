@@ -23,7 +23,7 @@ CREATE TABLE users (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     username        VARCHAR(50) UNIQUE NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
-    role            ENUM('admin', 'manager', 'employee') NOT NULL DEFAULT 'employee',
+    role            ENUM('super_admin', 'admin', 'hr', 'manager', 'team_lead', 'employee', 'auditor') NOT NULL DEFAULT 'employee',
     is_active       TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

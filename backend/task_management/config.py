@@ -106,6 +106,7 @@ class Config:
     MIN_PASSWORD_LENGTH = int(os.environ.get("MIN_PASSWORD_LENGTH", 8))
     MAX_FAILED_LOGINS = int(os.environ.get("MAX_FAILED_LOGINS", 5))
     LOCKOUT_MINUTES = int(os.environ.get("LOCKOUT_MINUTES", 15))
+    ADMIN_IDLE_MINUTES = int(os.environ.get("ADMIN_IDLE_MINUTES", 30))
     CSRF_ENABLED = True
     CSRF_COOKIE_NAME = "taskforge_csrf"
 

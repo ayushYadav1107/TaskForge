@@ -2,12 +2,45 @@ from datetime import date
 
 from ..extensions import db
 from ..models import Department, Employee, User
+from ..permissions import ROLE_LABELS, ROLES, is_department_scoped, outranks
 from .activity_service import log as log_activity
 from .errors import AuthError, EmployeeError
 from .passwords import hash_password, validate_password
 
 REQUIRED_FIELDS = ["department_id", "employee_code", "first_name", "last_name", "email", "phone"]
-ROLES = ("admin", "manager", "employee")
+
+
+def authorize_people_change(actor, department_id=None, target=None, new_role=None):
+    """The rank and scope rules for touching someone's account. Raises 403.
+
+    * you may only act on people who rank strictly below you,
+    * you may only grant roles that rank strictly below you,
+    * a manager or team lead stays inside their own department.
+    """
+    if target is not None:
+        target_role = target.user.role if target.user else "employee"
+        if not outranks(actor.role, target_role):
+            raise EmployeeError("You can only manage people below your own role", 403)
+        department_id = department_id or target.department_id
+
+    if new_role is not None:
+        if new_role not in ROLES:
+            raise EmployeeError(f"Role must be one of: {', '.join(ROLES)}")
+        if not outranks(actor.role, new_role):
+            raise EmployeeError(f"You cannot grant the {ROLE_LABELS[new_role]} role", 403)
+
+    if is_department_scoped(actor.role):
+        own = actor.employee.department_id if actor.employee else None
+        departments = {department_id, target.department_id if target is not None else department_id}
+        if own is None or any(_as_int(d) != own for d in departments):
+            raise EmployeeError("You can only manage people in your own department", 403)
+
+
+def _as_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _missing_fields(fields):
@@ -62,7 +95,9 @@ def create_employee(fields, actor_id):
         if User.query.filter_by(username=username).first():
             raise EmployeeError("That username is already taken")
 
-        role = fields.get("role") if fields.get("role") in ROLES else "employee"
+        role = fields.get("role") or "employee"
+        if role not in ROLES:
+            raise EmployeeError(f"Role must be one of: {', '.join(ROLES)}")
         user = User(username=username, password_hash=hash_password(password), role=role)
         db.session.add(user)
         db.session.flush()  # assigns user.id without a full commit
@@ -132,13 +167,40 @@ def delete_employee(employee_id, actor_id):
     return True
 
 
+def change_role(employee_id, new_role, actor_id):
+    employee = get_employee(employee_id)
+    if not employee.user:
+        raise EmployeeError("This person has no login to re-role")
+    old_role = employee.user.role
+    if old_role == new_role:
+        return employee
+
+    employee.user.role = new_role
+    db.session.commit()
+    log_activity(actor_id, "ROLE_CHANGE", "user", employee.user.id, {"role": old_role}, {"role": new_role})
+    return employee
+
+
+def unlock(employee_id, actor_id):
+    employee = get_employee(employee_id)
+    if employee.user:
+        employee.user.failed_login_count = 0
+        employee.user.locked_until = None
+        db.session.commit()
+        log_activity(actor_id, "UNLOCK", "user", employee.user.id)
+    return employee
+
+
 def list_employees_by_department(department_id):
     employees = Employee.query.filter_by(department_id=department_id, is_active=True).all()
     return employees
 
 
-def list_employees():
-    return Employee.query.filter_by(is_active=True).all()
+def list_employees(department_id=None):
+    query = Employee.query.filter_by(is_active=True)
+    if department_id is not None:
+        query = query.filter_by(department_id=department_id)
+    return query.all()
 
 
 def list_departments():

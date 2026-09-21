@@ -5,7 +5,7 @@ import { useActivity } from "../api/hooks";
 import { Empty, Panel, SkeletonRows } from "../components/ui";
 import { ActivityFeed } from "./Overview";
 
-const FILTERS = ["All", "CREATE", "UPDATE", "DELETE", "LOGIN"] as const;
+const FILTERS = ["All", "CREATE", "UPDATE", "DELETE", "LOGIN", "ADMIN_LOGIN", "ROLE_CHANGE"] as const;
 
 export function Activity() {
   const { data: entries, isLoading } = useActivity();

@@ -11,6 +11,7 @@ from task_management import create_app  # noqa: E402
 from task_management.config import TestingConfig  # noqa: E402
 from task_management.extensions import db  # noqa: E402
 from task_management.models import Department, Employee, User  # noqa: E402
+from task_management.permissions import CONSOLE_ROLES  # noqa: E402
 from task_management.services.passwords import hash_password  # noqa: E402
 
 PASSWORD = "Password123"
@@ -72,9 +73,12 @@ def users(app, department):
 
 
 def login(client, username, password=PASSWORD):
-    """Signs in and wires up the CSRF header the way the browser client does:
-    read the double-submit cookie, echo it back on every mutating call."""
-    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    """Signs in through the right door for the account's role, and wires up the
+    CSRF header the way the browser client does: read the double-submit cookie,
+    echo it back on every mutating call."""
+    user = User.query.filter_by(username=username).first()
+    door = "/api/auth/admin/login" if user and user.role in CONSOLE_ROLES else "/api/auth/login"
+    response = client.post(door, json={"username": username, "password": password})
     cookie = client.get_cookie("taskforge_csrf")
     if cookie is not None:
         client.environ_base["HTTP_X_CSRF_TOKEN"] = cookie.value

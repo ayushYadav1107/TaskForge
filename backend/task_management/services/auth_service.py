@@ -4,6 +4,7 @@ from flask import current_app
 
 from ..extensions import db
 from ..models import Department, Employee, User
+from ..permissions import CONSOLE_ROLES
 from . import employee_service
 from .activity_service import log as log_activity
 from .errors import AuthError
@@ -20,7 +21,10 @@ REGISTER_FIELDS = ["username", "password", "first_name", "last_name", "email", "
 INVALID_CREDENTIALS = "Invalid username or password"
 
 
-def authenticate_user(username, password):
+def authenticate_user(username, password, console=False):
+    """Checks credentials, then the door: admins sign in only through the
+    console (`console=True`), everyone else only through the workspace login.
+    The door is checked after the password so it reveals nothing to a guesser."""
     user = User.query.filter(db.func.lower(User.username) == str(username).strip().lower()).first()
 
     if not user or not user.is_active:
@@ -44,10 +48,16 @@ def authenticate_user(username, password):
         db.session.commit()
         raise AuthError(INVALID_CREDENTIALS, 401)
 
+    if console and user.role not in CONSOLE_ROLES:
+        log_activity(user.id, "CONSOLE_DENIED", "user", user.id)
+        raise AuthError("This account does not have admin console access", 403)
+    if not console and user.role in CONSOLE_ROLES:
+        raise AuthError("Admin accounts sign in through the admin console", 403)
+
     user.register_successful_login()
     db.session.commit()
 
-    log_activity(user.id, "LOGIN", "user", user.id)
+    log_activity(user.id, "ADMIN_LOGIN" if console else "LOGIN", "user", user.id)
     return user
 
 

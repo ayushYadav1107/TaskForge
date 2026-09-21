@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
 import { useDeleteEmployee, useDepartments, useEmployees, useSaveEmployee } from "../api/hooks";
-import type { Employee } from "../api/types";
+import type { Employee, Role } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { useConfirm } from "../components/ConfirmDialog";
 import { Modal } from "../components/Modal";
@@ -14,12 +14,17 @@ import {
   Field,
   FormError,
   Panel,
+  ROLE_LABELS,
   RoleBadge,
   SkeletonRows,
 } from "../components/ui";
 
 export function Employees() {
-  const { isAdmin } = useAuth();
+  const { user, can } = useAuth();
+  const grantable = user?.grantable_roles ?? [];
+  // You may only touch people ranked below you — the same rule the API applies.
+  const canTouch = (employee: Employee) =>
+    can("people.manage") && employee.role !== null && grantable.includes(employee.role);
   const { data: employees, isLoading } = useEmployees();
   const deleteEmployee = useDeleteEmployee();
   const confirm = useConfirm();
@@ -80,10 +85,12 @@ export function Employees() {
                 style={{ width: 200, height: 30, paddingLeft: 28 }}
               />
             </div>
-            <button type="button" className="btn btn-primary" onClick={() => setEditing({})}>
-              <Plus />
-              Add person
-            </button>
+            {can("people.manage") ? (
+              <button type="button" className="btn btn-primary" onClick={() => setEditing({})}>
+                <Plus />
+                Add person
+              </button>
+            ) : null}
           </div>
         }
       >
@@ -138,23 +145,25 @@ export function Employees() {
                       <RoleBadge role={employee.role} />
                     </td>
                     <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          className="btn btn-subtle btn-sm"
-                          onClick={() => setEditing(employee)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-subtle btn-sm btn-icon"
-                          onClick={() => deactivate(employee)}
-                          aria-label={`Deactivate ${employee.first_name} ${employee.last_name}`}
-                        >
-                          <Trash2 />
-                        </button>
-                      </div>
+                      {canTouch(employee) ? (
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-subtle btn-sm"
+                            onClick={() => setEditing(employee)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-subtle btn-sm btn-icon"
+                            onClick={() => deactivate(employee)}
+                            aria-label={`Deactivate ${employee.first_name} ${employee.last_name}`}
+                          >
+                            <Trash2 />
+                          </button>
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -164,22 +173,19 @@ export function Employees() {
         )}
       </Panel>
 
-      <EmployeeDialog
-        employee={editing}
-        canSetPrivilegedRole={isAdmin}
-        onClose={() => setEditing(null)}
-      />
+      <EmployeeDialog employee={editing} roles={grantable} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function EmployeeDialog({
+/** Add or edit a person. `roles` is what the signed-in user may grant. */
+export function EmployeeDialog({
   employee,
-  canSetPrivilegedRole,
+  roles,
   onClose,
 }: {
   employee: Partial<Employee> | null;
-  canSetPrivilegedRole: boolean;
+  roles: Role[];
   onClose: () => void;
 }) {
   const { data: departments } = useDepartments(employee !== null);
@@ -283,24 +289,13 @@ function EmployeeDialog({
                 <Field label="Employee code" htmlFor="emp-code" hint="e.g. ENG-007">
                   <input id="emp-code" name="employee_code" required />
                 </Field>
-                <Field
-                  label="Role"
-                  htmlFor="emp-role"
-                  hint={
-                    canSetPrivilegedRole
-                      ? undefined
-                      : "Only an admin can create managers and admins."
-                  }
-                >
-                  <select
-                    id="emp-role"
-                    name="role"
-                    defaultValue="employee"
-                    disabled={!canSetPrivilegedRole}
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
+                <Field label="Role" htmlFor="emp-role" hint="Only roles below your own.">
+                  <select id="emp-role" name="role" defaultValue="employee">
+                    {roles.map((role) => (
+                      <option key={role} value={role}>
+                        {ROLE_LABELS[role]}
+                      </option>
+                    ))}
                   </select>
                 </Field>
               </div>

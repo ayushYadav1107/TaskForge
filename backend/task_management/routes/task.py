@@ -1,18 +1,13 @@
 from flask import Blueprint, g, jsonify, request
 
-from ..auth_decorators import login_required, roles_required
+from ..auth_decorators import login_required, permission_required
 from ..services import task_service
 from ..services.errors import TaskError
 
 task_bp = Blueprint("task", __name__)
 
-# Only admins and managers own the task backlog; employees see tasks through
-# the assignments made to them.
-MANAGES_TASKS = ("admin", "manager")
-
-
 @task_bp.route("", methods=["POST"])
-@roles_required(*MANAGES_TASKS)
+@permission_required("tasks.manage")
 def create_task():
     try:
         task = task_service.create_task(request.get_json(silent=True) or {}, g.current_user.id)
@@ -54,7 +49,7 @@ def get_task(task_id):
 
 
 @task_bp.route("/<int:task_id>", methods=["PUT"])
-@roles_required(*MANAGES_TASKS)
+@permission_required("tasks.manage")
 def update_task(task_id):
     try:
         task = task_service.update_task(task_id, request.get_json(silent=True) or {}, g.current_user.id)
@@ -64,7 +59,7 @@ def update_task(task_id):
 
 
 @task_bp.route("/<int:task_id>", methods=["DELETE"])
-@roles_required(*MANAGES_TASKS)
+@permission_required("tasks.delete")
 def delete_task(task_id):
     try:
         task_service.delete_task(task_id, g.current_user.id)

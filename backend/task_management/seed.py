@@ -16,13 +16,17 @@ def run():
     db.create_all()
 
     # --- Users & the owner account ------------------------------------
-    ayush = User(username="ayush.yadav", password_hash=_hash("Ayush@123"), role="admin")
+    ayush = User(username="ayush.yadav", password_hash=_hash("Ayush@123"), role="super_admin")
+    admin_user = User(username="meera.nair", password_hash=_hash("Admin@123"), role="admin")
+    hr_user = User(username="neha.kapoor", password_hash=_hash("Hr@12345"), role="hr")
     manager_user = User(username="priya.mehta", password_hash=_hash("Manager@123"), role="manager")
+    lead_user = User(username="vikram.rao", password_hash=_hash("Lead@1234"), role="team_lead")
+    auditor_user = User(username="isha.menon", password_hash=_hash("Audit@123"), role="auditor")
     emp_users = [
         User(username=name, password_hash=_hash("Employee@123"), role="employee")
         for name in ["aarav.sharma", "rohan.patel", "ananya.iyer", "kabir.singh"]
     ]
-    db.session.add_all([ayush, manager_user, *emp_users])
+    db.session.add_all([ayush, admin_user, hr_user, manager_user, lead_user, auditor_user, *emp_users])
     db.session.flush()
 
     # --- Departments -----------------------------------------------------
@@ -55,19 +59,27 @@ def run():
         db.session.add(employee)
         employees.append(employee)
 
-    db.session.add(
-        Employee(
-            user_id=manager_user.id,
-            department_id=hr.id,
-            employee_code="HR-001",
-            first_name="Priya",
-            last_name="Mehta",
-            email="priya.mehta@taskforge.dev",
-            phone="9876500005",
-            position="HR Manager",
-            hire_date=date(2023, 6, 1),
+    staff_seed = [
+        (admin_user, engineering, "ENG-010", "Meera", "Nair", "9876500006", "IT Administrator"),
+        (hr_user, hr, "HUM-001", "Neha", "Kapoor", "9876500007", "People Partner"),
+        (manager_user, engineering, "ENG-020", "Priya", "Mehta", "9876500005", "Engineering Manager"),
+        (lead_user, engineering, "ENG-030", "Vikram", "Rao", "9876500008", "Tech Lead"),
+        (auditor_user, hr, "HUM-002", "Isha", "Menon", "9876500009", "Compliance Auditor"),
+    ]
+    for user, dept, code, first, last, phone, position in staff_seed:
+        db.session.add(
+            Employee(
+                user_id=user.id,
+                department_id=dept.id,
+                employee_code=code,
+                first_name=first,
+                last_name=last,
+                email=f"{user.username}@taskforge.dev",
+                phone=phone,
+                position=position,
+                hire_date=date(2023, 6, 1),
+            )
         )
-    )
     db.session.flush()
 
     # --- Tasks + assignments -----------------------------------------------
@@ -110,8 +122,9 @@ def run():
     db.session.commit()
 
     print("Seed complete.")
-    print("  Admin login:    ayush.yadav / Ayush@123")
-    print("  Manager login:  priya.mehta / Manager@123")
+    print("  Admin console:  ayush.yadav / Ayush@123 (super admin), meera.nair / Admin@123 (admin)")
+    print("  Workspace:      neha.kapoor / Hr@12345 (HR), priya.mehta / Manager@123 (manager),")
+    print("                  vikram.rao / Lead@1234 (team lead), isha.menon / Audit@123 (auditor)")
     print("  Employee login: aarav.sharma / Employee@123 (also rohan.patel, ananya.iyer, kabir.singh)")
 
 
@@ -141,7 +154,7 @@ def ensure_baseline(app, force=False):
         db.session.commit()
         created.append(f"{len(DEFAULT_DEPARTMENTS)} departments")
 
-    existing_admin = User.query.filter_by(role="admin").first()
+    existing_admin = User.query.filter(User.role.in_(("super_admin", "admin"))).first()
     if existing_admin and not force:
         if created:
             app.logger.info("Bootstrap created: %s", ", ".join(created))
@@ -157,7 +170,7 @@ def ensure_baseline(app, force=False):
         # supply one, mint a random password and print it exactly once.
         password = secrets.token_urlsafe(12)
 
-    admin = User(username=username, password_hash=_hash(password), role="admin")
+    admin = User(username=username, password_hash=_hash(password), role="super_admin")
     db.session.add(admin)
     db.session.commit()
 

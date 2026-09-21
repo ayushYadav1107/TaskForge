@@ -4,7 +4,7 @@ CSP_DEFAULT_SRC = "default-src 'self'"
 
 
 def test_mutating_request_without_csrf_header_is_rejected(client, users):
-    client.post("/api/auth/login", json={"username": "admin.user", "password": "Password123"})
+    client.post("/api/auth/login", json={"username": "manager.user", "password": "Password123"})
     # Authenticated, but deliberately not echoing the double-submit token.
     response = client.post("/api/tasks", json={"title": "Forged"})
     assert response.status_code == 403
@@ -12,7 +12,7 @@ def test_mutating_request_without_csrf_header_is_rejected(client, users):
 
 
 def test_mutating_request_with_a_wrong_csrf_token_is_rejected(client, users):
-    client.post("/api/auth/login", json={"username": "admin.user", "password": "Password123"})
+    client.post("/api/auth/login", json={"username": "manager.user", "password": "Password123"})
     client.environ_base["HTTP_X_CSRF_TOKEN"] = "not-the-real-token"
     assert client.post("/api/tasks", json={"title": "Forged"}).status_code == 403
 
@@ -21,7 +21,7 @@ def test_login_itself_works_without_a_prior_token(client, users):
     """An unauthenticated caller has no session to ride, so the login endpoint
     stays usable from curl and from a cold browser."""
     response = client.post(
-        "/api/auth/login", json={"username": "admin.user", "password": "Password123"}
+        "/api/auth/login", json={"username": "manager.user", "password": "Password123"}
     )
     assert response.status_code == 200
 

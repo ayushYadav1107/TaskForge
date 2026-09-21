@@ -4,12 +4,12 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { CommandPalette } from "../components/CommandPalette";
-import { Avatar } from "../components/ui";
+import { Avatar, ROLE_LABELS } from "../components/ui";
 import { useTheme } from "../theme";
 import { NAV_ITEMS, metaFor } from "./navigation";
 
 export function AppShell() {
-  const { user, canManage, isAdmin, logout } = useAuth();
+  const { user, can, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,31 +26,26 @@ export function AppShell() {
     onEscape: () => setDrawerOpen(false),
     onGoTo: (key) => {
       const target = NAV_ITEMS.find(
-        (item) => item.shortcut?.toLowerCase().endsWith(key) && allowed(item),
+        (item) => item.shortcut?.toLowerCase().endsWith(key) && (!item.permission || can(item.permission)),
       );
       if (target) navigate(target.to);
     },
   });
 
-  function allowed(item: (typeof NAV_ITEMS)[number]) {
-    if (item.adminOnly) return isAdmin;
-    if (item.managerOnly) return canManage;
-    return true;
-  }
-
   const meta = metaFor(location.pathname);
   const employee = user?.employee;
   const displayName = employee ? `${employee.first_name} ${employee.last_name}` : user?.username;
 
-  const visible = NAV_ITEMS.filter((item) => {
-    if (item.adminOnly) return isAdmin;
-    if (item.managerOnly) return canManage;
-    return true;
-  });
+  const visible = NAV_ITEMS.filter((item) => !item.permission || can(item.permission));
+  const groups = (["Console", "Workspace"] as const)
+    .map((name) => ({ name, items: visible.filter((item) => item.group === name) }))
+    .filter((group) => group.items.length > 0);
+  const inConsole = location.pathname.startsWith("/admin");
 
   async function handleLogout() {
+    const door = can("console.access") ? "/admin/login" : "/login";
     await logout();
-    navigate("/login", { replace: true });
+    navigate(door, { replace: true });
   }
 
   return (
@@ -65,7 +60,7 @@ export function AppShell() {
         aria-hidden="true"
       />
 
-      <div className="app-shell">
+      <div className={`app-shell${inConsole ? " console" : ""}`}>
         <aside className={`sidebar${drawerOpen ? " open" : ""}`} id="sidebar">
           <div className="brand">
             <span className="brand-mark">TF</span>
@@ -73,20 +68,25 @@ export function AppShell() {
           </div>
 
           <nav aria-label="Main">
-            <div className="nav-group">Workspace</div>
-            {visible.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
-                >
-                  <Icon />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
+            {groups.map((group) => (
+              <div key={group.name}>
+                <div className="nav-group">{group.name}</div>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end
+                      className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+                    >
+                      <Icon />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <div className="sidebar-footer">
@@ -108,7 +108,7 @@ export function AppShell() {
               />
               <div className="sidebar-user-text">
                 <div className="sidebar-user-name">{displayName}</div>
-                <div className="sidebar-user-role">{user?.role}</div>
+                <div className="sidebar-user-role">{user ? ROLE_LABELS[user.role] : null}</div>
               </div>
             </div>
           </div>
@@ -127,8 +127,9 @@ export function AppShell() {
               <Menu size={16} />
             </button>
 
-            <div>
+            <div className="topbar-title" key={location.pathname}>
               <h1>{meta.title}</h1>
+              {meta.subtitle ? <p className="topbar-sub">{meta.subtitle}</p> : null}
             </div>
 
             <div className="topbar-spacer" />
@@ -145,7 +146,7 @@ export function AppShell() {
             </button>
           </header>
 
-          <main className="page" id="main">
+          <main className="page" id="main" key={location.pathname}>
             <Outlet />
           </main>
         </div>

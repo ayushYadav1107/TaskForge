@@ -66,10 +66,38 @@ Authorization is enforced **server-side on every endpoint**. The React route
 guards exist for UX only — anything decided in the browser can be edited in the
 browser, so `backend/tests/test_authorization.py` asserts the real rules.
 
-### Permission matrix
+### Roles and permissions
 
-| Capability | Admin | Manager | Employee |
-|---|:---:|:---:|:---:|
+Seven roles, defined once in `backend/task_management/permissions.py`. Routes
+check permissions (`tasks.manage`, `people.manage`, …), never role names, and
+`/api/auth/me` sends each user their own permission list for the UI.
+
+| Capability | Super admin | Admin | HR | Manager | Team lead | Employee | Auditor |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Admin console (separate sign-in) | ✓ | ✓ | | | | | |
+| Create / edit tasks | ✓ | ✓ | | ✓ | ✓ | | |
+| Delete tasks | ✓ | ✓ | | ✓ | | | |
+| Assign / unassign work | ✓ | ✓ | | dept | dept | | |
+| See everyone's assignments | ✓ | ✓ | | dept | dept | | read |
+| Browse people | ✓ | ✓ | ✓ | dept | dept | | read |
+| Add, edit, deactivate, re-role people | ✓ | ✓ | ✓ | dept | | | |
+| Create departments | ✓ | ✓ | ✓ | | | | |
+| Read the audit log | ✓ | ✓ | | | | | ✓ |
+| Update **own** assignment status | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Rules that apply on top of the table:
+
+* **No escalation.** Roles are ranked (super admin 6 → employee 1; auditor sits
+  with HR at 4). You can only grant roles, and only touch accounts, ranked
+  strictly below your own.
+* **Department scope.** "dept" means the manager or team lead only sees and
+  acts on people in their own department.
+* **Two doors.** Super admins and admins sign in only at `/admin/login`
+  (`POST /api/auth/admin/login`); everyone else only at `/login`. An admin
+  session ends after `ADMIN_IDLE_MINUTES` (30) idle, and a user promoted to
+  admin mid-session must sign in again through the console.
+
+---|:---:|:---:|:---:|
 | Create / edit / delete tasks | ✓ | ✓ | |
 | Assign work, remove assignments | ✓ | ✓ | |
 | View all assignments & staff directory | ✓ | ✓ | |
@@ -118,11 +146,15 @@ exactly as it is in production.
 
 Created by `flask seed`:
 
-| Role | Username | Password |
-|---|---|---|
-| Admin | `ayush.yadav` | `Ayush@123` |
-| Manager | `priya.mehta` | `Manager@123` |
-| Employee | `aarav.sharma` | `Employee@123` |
+| Role | Username | Password | Door |
+|---|---|---|---|
+| Super admin | `ayush.yadav` | `Ayush@123` | `/admin/login` |
+| Admin | `meera.nair` | `Admin@123` | `/admin/login` |
+| HR | `neha.kapoor` | `Hr@12345` | `/login` |
+| Manager (Engineering) | `priya.mehta` | `Manager@123` | `/login` |
+| Team lead (Engineering) | `vikram.rao` | `Lead@1234` | `/login` |
+| Auditor | `isha.menon` | `Audit@123` | `/login` |
+| Employee | `aarav.sharma` | `Employee@123` | `/login` |
 
 To show these on the sign-in page, build with `VITE_DEMO_MODE=true`. A real
 deploy mints a random admin password on first boot instead.
@@ -135,6 +167,11 @@ Set one variable in `backend/.env`:
 DATABASE_URL=postgresql://user:password@localhost:5432/taskforge
 DATABASE_URL=mysql://root:password@localhost:3306/taskforge
 ```
+
+For a local Postgres, `docker compose up -d db` starts one (see
+`docker-compose.yml`) at
+`postgresql://taskforge:taskforge@localhost:5432/taskforge`. Hosted URLs from
+Neon, Supabase, Railway or Render can be pasted as-is. Migrations run on boot.
 
 `backend/../database/schema.sql` holds the original hand-written MySQL schema;
 Alembic is the source of truth now.
@@ -216,21 +253,25 @@ All routes are under `/api`. Mutations require the `X-CSRF-Token` header.
 
 | Method | Route | Access |
 |---|---|---|
-| `POST` | `/auth/register` · `/auth/login` | public |
+| `POST` | `/auth/register` · `/auth/login` · `/auth/admin/login` | public |
 | `GET` | `/auth/departments` | public (the signup picker needs it) |
 | `GET` | `/auth/me` | authenticated |
 | `POST` | `/auth/logout` · `/auth/change-password` | authenticated |
 | `GET` | `/tasks` (filter, search, paginate) | authenticated |
-| `POST` `PUT` `DELETE` | `/tasks` · `/tasks/<id>` | admin, manager |
-| `GET` | `/assignments` · `/assignments/task/<id>` | admin, manager |
+| `POST` `PUT` | `/tasks` · `/tasks/<id>` | `tasks.manage` |
+| `DELETE` | `/tasks/<id>` | `tasks.delete` |
+| `GET` | `/assignments` · `/assignments/task/<id>` | `assignments.view_all` (dept-scoped for managers/leads) |
 | `GET` | `/assignments/mine` | authenticated |
-| `POST` `DELETE` | `/assignments` · `/assignments/<id>` | admin, manager |
-| `PUT` | `/assignments/<id>/status` | owner, or admin/manager |
-| `GET` `POST` `PUT` `DELETE` | `/employees` | admin, manager |
+| `POST` `DELETE` | `/assignments` · `/assignments/<id>` | `assignments.manage`, in scope |
+| `PUT` | `/assignments/<id>/status` | owner, or `assignments.manage` in scope |
+| `GET` | `/employees` · `/employees/<id>` | `people.view` (dept-scoped), or yourself |
+| `POST` `PUT` `DELETE` | `/employees` · `/employees/<id>` | `people.manage`, rank + scope rules |
+| `PUT` · `POST` | `/employees/<id>/role` · `/employees/<id>/unlock` | `people.manage`, rank + scope rules |
 | `GET` | `/departments` | authenticated |
-| `POST` | `/departments` | admin, manager |
-| `GET` | `/dashboard/stats` | admin, manager |
-| `GET` | `/dashboard/activity` | admin |
+| `POST` | `/departments` | `departments.manage` |
+| `GET` | `/dashboard/stats` | `dashboard.view` |
+| `GET` | `/dashboard/activity` | `audit.view` |
+| `GET` | `/admin/roles` | `people.view` |
 | `GET` | `/healthz` · `/readyz` | public |
 
 ---

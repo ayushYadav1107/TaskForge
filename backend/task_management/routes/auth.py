@@ -1,3 +1,5 @@
+import time
+
 from flask import Blueprint, g, jsonify, request, session
 
 from ..auth_decorators import login_required
@@ -7,12 +9,15 @@ from ..services.errors import AuthError
 auth_bp = Blueprint("auth", __name__)
 
 
-def _start_session(user):
+def _start_session(user, console=False):
     """Drops anything left over from a previous visitor before establishing the
     new session, so no attacker-planted key survives the login boundary."""
     session.clear()
     session["user_id"] = user.id
     session["role"] = user.role
+    if console:
+        session["console"] = True
+        session["seen"] = int(time.time())
     session.permanent = True
 
 
@@ -34,19 +39,28 @@ def register():
         return jsonify({"error": err.message}), err.status
 
 
-@auth_bp.route("/login", methods=["POST"])
-def login():
+def _login(console):
     body = request.get_json(silent=True) or {}
     username, password = body.get("username"), body.get("password")
     if not username or not password:
         return jsonify({"error": "username and password are required"}), 400
 
     try:
-        user = auth_service.authenticate_user(username, password)
-        _start_session(user)
+        user = auth_service.authenticate_user(username, password, console=console)
+        _start_session(user, console=console)
         return jsonify({"user": user.to_dict()})
     except AuthError as err:
         return jsonify({"error": err.message}), err.status
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    return _login(console=False)
+
+
+@auth_bp.route("/admin/login", methods=["POST"])
+def admin_login():
+    return _login(console=True)
 
 
 @auth_bp.route("/logout", methods=["POST"])

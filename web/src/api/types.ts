@@ -1,4 +1,27 @@
-export type Role = "admin" | "manager" | "employee";
+export const ROLES = [
+  "super_admin",
+  "admin",
+  "hr",
+  "manager",
+  "team_lead",
+  "employee",
+  "auditor",
+] as const;
+export type Role = (typeof ROLES)[number];
+
+/** Mirrors backend/task_management/permissions.py. The server sends each user
+ *  their own list on /me, so the UI never re-derives it from the role. */
+export type Permission =
+  | "dashboard.view"
+  | "tasks.manage"
+  | "tasks.delete"
+  | "assignments.manage"
+  | "assignments.view_all"
+  | "people.view"
+  | "people.manage"
+  | "departments.manage"
+  | "audit.view"
+  | "console.access";
 
 export const PRIORITIES = ["Low", "Medium", "High", "Urgent"] as const;
 export const STATUSES = ["Pending", "In Progress", "Completed", "On Hold", "Cancelled"] as const;
@@ -22,6 +45,8 @@ export interface Employee {
   department_name: string | null;
   username: string | null;
   role: Role | null;
+  is_locked: boolean;
+  last_login_at: string | null;
 }
 
 export interface User {
@@ -31,6 +56,9 @@ export interface User {
   is_active: boolean;
   created_at: string;
   last_login_at: string | null;
+  is_locked: boolean;
+  permissions: Permission[];
+  grantable_roles: Role[];
   employee?: Employee;
 }
 
@@ -89,4 +117,9 @@ export interface DashboardStats {
   total_assignments: number;
   completion_rate: number;
   by_status: Record<Status, number>;
+}
+
+export interface RoleMatrix {
+  roles: { key: Role; label: string; level: number; scoped: boolean }[];
+  permissions: { key: Permission; label: string; roles: Role[] }[];
 }

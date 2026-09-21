@@ -64,7 +64,8 @@ export function Signup() {
 
   return (
     <AuthLayout
-      headline="Join your team in a minute."
+      headline="Join your team"
+      accent="in a minute."
       lede="Create your employee account, pick your department, and your manager can start assigning you work straight away."
     >
       <div className="auth-card auth-card--wide">

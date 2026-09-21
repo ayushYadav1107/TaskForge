@@ -32,18 +32,14 @@ interface Command {
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { user, canManage, isAdmin, logout } = useAuth();
+  const { user, can, logout } = useAuth();
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
   const commands = useMemo<Command[]>(() => {
-    const visible = NAV_ITEMS.filter((item) => {
-      if (item.adminOnly) return isAdmin;
-      if (item.managerOnly) return canManage;
-      return true;
-    });
+    const visible = NAV_ITEMS.filter((item) => !item.permission || can(item.permission));
 
     const navigation: Command[] = visible.map((item) => ({
       id: `nav:${item.to}`,
@@ -77,7 +73,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     }
 
     return [...navigation, ...actions];
-  }, [navigate, theme, toggleTheme, user, logout, canManage, isAdmin]);
+  }, [navigate, theme, toggleTheme, user, logout, can]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();
