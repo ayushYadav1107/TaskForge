@@ -1,4 +1,12 @@
-# Deploying TaskForge
+<div align="center">
+
+# 🚀 Deployment
+
+**[← Back to README](README.md)** · [Architecture](docs/ARCHITECTURE.md) · [Security](docs/SECURITY.md) · [API](docs/API.md) · [Development](docs/DEVELOPMENT.md) · [Screenshots](docs/SCREENSHOTS.md)
+
+</div>
+
+---
 
 The app ships as a single container: Node builds the React bundle, then a slim
 Python image serves both that bundle and the API through Gunicorn. Any host

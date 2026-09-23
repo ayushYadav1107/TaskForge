@@ -1,116 +1,235 @@
-# TaskForge — Task & Workforce Management
+<div align="center">
 
-> Full-stack, role-based task management. **React + TypeScript** front end, **Flask + SQLAlchemy** REST API, **PostgreSQL / MySQL / SQLite**, containerised and CI-tested.
+<img src="docs/screenshots/login.png" alt="TaskForge sign-in" width="880">
+
+# TaskForge
+
+### Role-based task & workforce management, built end to end.
+
+**React 18 + TypeScript** SPA · **Flask + SQLAlchemy 2** REST API · **PostgreSQL / MySQL / SQLite** · one Docker image
 
 [![CI](https://github.com/ayushYadav1107/TaskForge/actions/workflows/ci.yml/badge.svg)](https://github.com/ayushYadav1107/TaskForge/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-116_passing-2ea043?logo=pytest&logoColor=white)](#-tests)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Flask](https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://docker.com)
+[![License](https://img.shields.io/badge/license-MIT-e8572a)](LICENSE)
 
-Admins and managers create work and assign it; employees track and update only
-their own. Every mutation is written to an append-only audit log with full
-before/after state.
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────┐
-│  React 18 + TypeScript SPA  │   Vite · React Router · TanStack Query
-│  (web/)                     │
-└──────────────┬──────────────┘
-               │  same-origin fetch, session cookie + CSRF header
-┌──────────────▼──────────────┐
-│  Flask REST API             │   routes → services → models
-│  (backend/task_management/) │   no business logic in a route handler
-└──────────────┬──────────────┘
-               │  SQLAlchemy 2.0 ORM · Alembic migrations
-┌──────────────▼──────────────┐
-│  PostgreSQL / MySQL/ SQLite │
-└─────────────────────────────┘
-```
-
-The SPA and the API are served from **one origin**: in production Flask serves
-the compiled Vite bundle. That keeps the session cookie first-party, which
-means no CORS configuration and no access token sitting in `localStorage` for
-an XSS payload to steal.
-
-**Layering.** Route handlers parse the request, call a service, and shape the
-response — nothing else. All business rules live in `services/`, which is why
-the same validation applies whether a task is created through the API, the
-seed script, or the CLI.
+</div>
 
 ---
 
-## Security
+> Admins and managers create work and assign it. Employees track and update only
+> their own. Managers and team leads see only their department. Auditors read
+> everything and change nothing. Every mutation is written to an append-only
+> audit log with full before/after state.
 
-Cookie sessions are the right fit for a same-origin SPA, but they have to be
-built correctly. What that meant here:
+<br>
 
-| Concern | Approach |
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🔐 Seven real roles
+Super admin, admin, HR, manager, team lead, employee, auditor — defined once in
+a single permission map, enforced on every endpoint, never in the browser.
+
+</td>
+<td width="33%" valign="top">
+
+### 📋 Board & list
+Kanban across five statuses with drag-to-move, plus a sortable table view,
+search, priority filters and pagination.
+
+</td>
+<td width="33%" valign="top">
+
+### 🧾 Append-only audit
+Every create, update, delete and role change lands in `activity_logs` with the
+full JSON before/after state.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### ⌨️ Command palette
+<kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>K</kbd> with subsequence matching, plus
+`g`-then-key chords (`g` `t` → Tasks).
+
+</td>
+<td valign="top">
+
+### 🌓 Light & dark
+One design-token layer drives both themes, spacing and the whole type scale —
+no ad-hoc values anywhere.
+
+</td>
+<td valign="top">
+
+### 🐳 One image
+Node builds the SPA, a slim Python image serves it and the API behind Gunicorn.
+Same origin, so no CORS and no token in `localStorage`.
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📚 Documentation
+
+The detail lives in focused documents — this page is the tour.
+
+| Document | What's inside |
 |---|---|
-| Password storage | `scrypt` via Werkzeug — memory-hard, so GPU cracking is expensive |
-| Brute force | Lockout after 5 failures for 15 min, **counted on the user row** so the limit is shared across every worker and survives restarts |
-| Username enumeration | One generic error for every credential failure, plus a dummy hash on the miss path so a nonexistent user doesn't answer faster |
-| CSRF | Double-submit token: a readable cookie the SPA echoes in `X-CSRF-Token`, verified with `compare_digest`. Enforced only on authenticated mutations, so `curl`-ing the login endpoint still works |
-| Session fixation | The session is cleared and rebuilt at the login boundary |
-| Stale privileges | The role is re-read from the database each request, so a demotion binds immediately instead of waiting for the cookie to expire |
-| XSS | Strict CSP (`script-src 'self'`, no `unsafe-inline`) and React's escaping by default |
-| Transport | `Secure` + `HttpOnly` + `SameSite=Lax` cookies and HSTS in production |
-| Secrets | Production **refuses to boot** without `SECRET_KEY` rather than falling back to a shared default |
-| Error leakage | Unhandled exceptions return a generic message; the traceback goes to the log with a correlation id |
+| 🏛 **[Architecture](docs/ARCHITECTURE.md)** | Layering, request lifecycle, ER diagram, module map, the N+1 fixes |
+| 🛡 **[Security & RBAC](docs/SECURITY.md)** | Session design, CSRF, lockout, the full permission matrix, escalation rules |
+| 🔌 **[API reference](docs/API.md)** | Every endpoint, its permission, its payload |
+| 🧰 **[Development](docs/DEVELOPMENT.md)** | Local setup, MySQL/Postgres, tests, project layout, conventions |
+| 🖼 **[Screenshots](docs/SCREENSHOTS.md)** | Every screen, light and dark, desktop and mobile |
+| 🚀 **[Deployment](DEPLOYMENT.md)** | Docker, Render, Railway, Fly.io, environment variables |
+
+---
+
+## 🖼 A look around
+
+<div align="center">
+
+**Workspace overview** — live counts, assignment breakdown, recent activity
+
+<img src="docs/screenshots/overview.png" alt="Overview dashboard" width="900">
+
+<br><br>
+
+**Task board** — five statuses, drag to move, priority and progress on every card
+
+<img src="docs/screenshots/tasks-light.png" alt="Task board" width="900">
+
+<br><br>
+
+**Roles & permissions** — the server's permission map, rendered
+
+<img src="docs/screenshots/admin-roles.png" alt="Roles and permissions matrix" width="900">
+
+<br><br>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/my-tasks.png" alt="My tasks"><br><div align="center"><sub><b>My tasks</b> — what an employee sees</sub></div></td>
+<td width="50%"><img src="docs/screenshots/command-palette.png" alt="Command palette"><br><div align="center"><sub><b>Command palette</b> — Ctrl/Cmd + K</sub></div></td>
+</tr>
+</table>
+
+[**→ See every screen**](docs/SCREENSHOTS.md)
+
+</div>
+
+---
+
+## 🏗 How it fits together
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff4ee','primaryTextColor':'#1c1917','primaryBorderColor':'#e8572a','lineColor':'#a8a29e','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px'}}}%%
+flowchart TB
+    subgraph browser["🖥  Browser"]
+        direction LR
+        SPA["<b>React 18 + TypeScript</b><br/>Vite · React Router · TanStack Query<br/><code>web/src</code>"]
+    end
+
+    subgraph server["🐍  Flask container"]
+        direction TB
+        STATIC["<b>Static handler</b><br/>serves the built SPA<br/>index.html fallback"]
+        MW["<b>Middleware</b><br/>CSRF · CSP · HSTS · request id"]
+        R["<b>routes/</b><br/>parse · delegate · respond"]
+        S["<b>services/</b><br/>all business rules & validation"]
+        P["<b>permissions.py</b><br/>role → permission map"]
+        M["<b>models/</b><br/>SQLAlchemy 2.0 ORM"]
+    end
+
+    DB[("<b>PostgreSQL</b><br/>MySQL · SQLite<br/>Alembic migrations")]
+
+    SPA -->|"same-origin fetch<br/>session cookie + X-CSRF-Token"| MW
+    browser -.->|"first paint"| STATIC
+    MW --> R
+    R --> S
+    R -.->|"can(role, perm)"| P
+    S -.->|"can(role, perm)"| P
+    S --> M
+    M --> DB
+
+    classDef front fill:#fff4ee,stroke:#e8572a,stroke-width:2px,color:#1c1917
+    classDef back fill:#eef6ff,stroke:#3b82f6,stroke-width:2px,color:#1c1917
+    classDef guard fill:#fef6e7,stroke:#f59e0b,stroke-width:2px,color:#1c1917
+    classDef data fill:#ecfdf5,stroke:#14b8a6,stroke-width:2px,color:#1c1917
+
+    class SPA front
+    class STATIC,MW,R,S,M back
+    class P guard
+    class DB data
+```
+
+**One origin.** In production Flask serves the compiled Vite bundle itself. That
+keeps the session cookie first-party — which means no CORS configuration, and no
+access token sitting in `localStorage` for an XSS payload to steal.
+
+**Strict layering.** A route handler parses the request, calls a service, and
+shapes the response — nothing else. Every business rule lives in `services/`,
+which is why the same validation applies whether a task arrives through the API,
+the seed script, or the CLI.
+
+[**→ Full architecture, with the request lifecycle and the ER diagram**](docs/ARCHITECTURE.md)
+
+---
+
+## 🔐 Who can do what
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff4ee','primaryTextColor':'#1c1917','primaryBorderColor':'#e8572a','lineColor':'#a8a29e','fontFamily':'ui-sans-serif, system-ui, sans-serif'}}}%%
+flowchart LR
+    SA["<b>L6 Super admin</b><br/>everything"]
+    AD["<b>L5 Admin</b><br/>everything"]
+    HR["<b>L4 HR</b><br/>people + departments"]
+    AU["<b>L4 Auditor</b><br/>read-only, everywhere"]
+    MA["<b>L3 Manager</b><br/>own department"]
+    TL["<b>L2 Team lead</b><br/>own department"]
+    EM["<b>L1 Employee</b><br/>own assignments"]
+
+    SA --> AD --> HR & AU
+    HR --> MA --> TL --> EM
+    AU -.-> EM
+
+    classDef l6 fill:#fff1ec,stroke:#e8572a,stroke-width:2px,color:#1c1917
+    classDef l5 fill:#fef6e7,stroke:#d97706,stroke-width:2px,color:#1c1917
+    classDef l4 fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#1c1917
+    classDef l3 fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#1c1917
+    classDef l2 fill:#ecfeff,stroke:#0891b2,stroke-width:2px,color:#1c1917
+    classDef l1 fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1c1917
+
+    class SA l6
+    class AD l5
+    class HR,AU l4
+    class MA l3
+    class TL l2
+    class EM l1
+```
+
+Roles are **ranked**. You can only grant a role below your own, and only touch
+accounts below your own — so nobody can mint a peer or a superior. Managers and
+team leads are **department-scoped**. Super admins and admins come through a
+separate door (`/admin/login`) with a 30-minute idle timeout.
 
 Authorization is enforced **server-side on every endpoint**. The React route
 guards exist for UX only — anything decided in the browser can be edited in the
 browser, so `backend/tests/test_authorization.py` asserts the real rules.
 
-### Roles and permissions
-
-Seven roles, defined once in `backend/task_management/permissions.py`. Routes
-check permissions (`tasks.manage`, `people.manage`, …), never role names, and
-`/api/auth/me` sends each user their own permission list for the UI.
-
-| Capability | Super admin | Admin | HR | Manager | Team lead | Employee | Auditor |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Admin console (separate sign-in) | ✓ | ✓ | | | | | |
-| Create / edit tasks | ✓ | ✓ | | ✓ | ✓ | | |
-| Delete tasks | ✓ | ✓ | | ✓ | | | |
-| Assign / unassign work | ✓ | ✓ | | dept | dept | | |
-| See everyone's assignments | ✓ | ✓ | | dept | dept | | read |
-| Browse people | ✓ | ✓ | ✓ | dept | dept | | read |
-| Add, edit, deactivate, re-role people | ✓ | ✓ | ✓ | dept | | | |
-| Create departments | ✓ | ✓ | ✓ | | | | |
-| Read the audit log | ✓ | ✓ | | | | | ✓ |
-| Update **own** assignment status | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-Rules that apply on top of the table:
-
-* **No escalation.** Roles are ranked (super admin 6 → employee 1; auditor sits
-  with HR at 4). You can only grant roles, and only touch accounts, ranked
-  strictly below your own.
-* **Department scope.** "dept" means the manager or team lead only sees and
-  acts on people in their own department.
-* **Two doors.** Super admins and admins sign in only at `/admin/login`
-  (`POST /api/auth/admin/login`); everyone else only at `/login`. An admin
-  session ends after `ADMIN_IDLE_MINUTES` (30) idle, and a user promoted to
-  admin mid-session must sign in again through the console.
-
----|:---:|:---:|:---:|
-| Create / edit / delete tasks | ✓ | ✓ | |
-| Assign work, remove assignments | ✓ | ✓ | |
-| View all assignments & staff directory | ✓ | ✓ | |
-| Manage departments | ✓ | ✓ | |
-| Create manager / admin accounts | ✓ | | |
-| Read the audit log | ✓ | | |
-| Update **own** assignment status | ✓ | ✓ | ✓ |
-| View own profile | ✓ | ✓ | ✓ |
-| Self-register (always as employee) | ✓ | ✓ | ✓ |
+[**→ The full matrix, and how the session is built**](docs/SECURITY.md)
 
 ---
 
-## Running it locally
+## ⚡ Run it locally
 
 **Requirements:** Python 3.11+, Node 20+. No database server needed — it falls
 back to SQLite.
@@ -120,211 +239,182 @@ git clone https://github.com/ayushYadav1107/TaskForge.git
 cd TaskForge
 ```
 
-**API** (terminal 1):
+<table>
+<tr><td width="50%" valign="top">
+
+**API** — terminal 1
 
 ```bash
 cd backend
-python -m venv venv && venv/Scripts/activate      # macOS/Linux: source venv/bin/activate
+python -m venv venv
+venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env
-flask --app task_management seed                  # demo data + logins
-python run.py                                     # http://localhost:5000
+flask --app task_management seed
+python run.py                # :5000
 ```
 
-**Front end** (terminal 2):
+</td><td width="50%" valign="top">
+
+**Front end** — terminal 2
 
 ```bash
 cd web
 npm install
-npm run dev                                       # http://localhost:5173
+npm run dev                  # :5173
 ```
 
-Vite proxies `/api` to port 5000, so the cookie stays first-party in dev
-exactly as it is in production.
+Vite proxies `/api` to port 5000, so the
+cookie stays first-party in dev exactly
+as it is in production.
 
-### Demo logins
+</td></tr>
+</table>
+
+### 🔑 Demo logins
 
 Created by `flask seed`:
 
-| Role | Username | Password | Door |
-|---|---|---|---|
-| Super admin | `ayush.yadav` | `Ayush@123` | `/admin/login` |
-| Admin | `meera.nair` | `Admin@123` | `/admin/login` |
-| HR | `neha.kapoor` | `Hr@12345` | `/login` |
-| Manager (Engineering) | `priya.mehta` | `Manager@123` | `/login` |
-| Team lead (Engineering) | `vikram.rao` | `Lead@1234` | `/login` |
-| Auditor | `isha.menon` | `Audit@123` | `/login` |
-| Employee | `aarav.sharma` | `Employee@123` | `/login` |
+| | Role | Username | Password | Door |
+|:-:|---|---|---|---|
+| 🟠 | Super admin | `ayush.yadav` | `Ayush@123` | `/admin/login` |
+| 🟡 | Admin | `meera.nair` | `Admin@123` | `/admin/login` |
+| 🩷 | HR | `neha.kapoor` | `Hr@12345` | `/login` |
+| 🟣 | Manager · Engineering | `priya.mehta` | `Manager@123` | `/login` |
+| 🔵 | Team lead · Engineering | `vikram.rao` | `Lead@1234` | `/login` |
+| ⚪ | Auditor | `isha.menon` | `Audit@123` | `/login` |
+| 🟢 | Employee | `aarav.sharma` | `Employee@123` | `/login` |
 
-To show these on the sign-in page, build with `VITE_DEMO_MODE=true`. A real
-deploy mints a random admin password on first boot instead.
+Build with `VITE_DEMO_MODE=true` to show these on the sign-in page. A real deploy
+mints a random admin password on first boot instead.
 
-### Using MySQL or Postgres instead
+[**→ MySQL/Postgres setup, scripts and conventions**](docs/DEVELOPMENT.md)
 
-Set one variable in `backend/.env`:
+---
+
+## 🧪 Tests
+
+**116 tests.** No database server, no browser.
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/taskforge
-DATABASE_URL=mysql://root:password@localhost:3306/taskforge
+cd backend && pytest -q      #  89 — auth, RBAC, CSRF, tasks, roles, deploy config
+cd web && npm run test       #  27 — API client, session query, formatting
 ```
 
-For a local Postgres, `docker compose up -d db` starts one (see
-`docker-compose.yml`) at
-`postgresql://taskforge:taskforge@localhost:5432/taskforge`. Hosted URLs from
-Neon, Supabase, Railway or Render can be pasted as-is. Migrations run on boot.
+The backend suite runs on in-memory SQLite with a fresh schema per test. The most
+load-bearing file is `test_authorization.py`: it pins every rule in the permission
+matrix, including the ones that were originally wrong.
 
-`backend/../database/schema.sql` holds the original hand-written MySQL schema;
-Alembic is the source of truth now.
-
----
-
-## Tests
-
-96 tests, no database server and no browser required.
-
-```bash
-cd backend && pytest -q          # 69 — auth, RBAC, CSRF, deploy config
-cd web && npm run test           # 27 — API client, session query, formatting
-```
-
-The backend suite runs on in-memory SQLite with a fresh schema per test. The
-most load-bearing file is `test_authorization.py`: it pins every rule in the
-matrix above, including the ones that were originally wrong.
-
-`test_config.py` is worth a look too — it pins the database-URL normalisation
-that decides whether a deploy boots at all. Managed hosts hand out
-`postgres://`, which SQLAlchemy 2 rejects outright, and that failure cannot be
-reproduced locally against SQLite.
+`test_config.py` is worth a look too — it pins the database-URL normalisation that
+decides whether a deploy boots at all. Managed hosts hand out `postgres://`, which
+SQLAlchemy 2 rejects outright, and that failure cannot be reproduced locally
+against SQLite.
 
 ---
 
-## Deployment
+## 🧱 Stack
 
-The `Dockerfile` is a two-stage build: Node compiles the SPA, then a slim
-Python image takes only the built assets, runs as a non-root user, and serves
-both through Gunicorn. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for Render,
-Railway, Fly.io and plain-Docker instructions.
-
-```bash
-docker build -t taskforge .
-docker run -p 8000:8000 \
-  -e SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
-  -e APP_ENV=production \
-  -e DATABASE_URL="postgresql://…" \
-  taskforge
-```
-
-On first boot against an empty database the app applies migrations, creates the
-default departments, and mints an admin account — so a fresh deploy is usable
-immediately instead of presenting a signup form with an empty department list.
-
-`/api/healthz` is a pure liveness check; `/api/readyz` round-trips a query and
-returns 503 when the database is unreachable.
-
----
-
-## Interface
-
-The UI is built on a small design-token layer (`web/src/styles/tokens.css`)
-rather than ad-hoc values, so light and dark themes, spacing and type all come
-from one place.
-
-- **Neutral-first palette.** The interface is greys and 1px borders; the accent
-  appears only on focus rings, the active nav row and primary buttons. Status
-  is carried by a 6px coloured dot rather than a saturated pill, so a column of
-  them stays scannable.
-- **A real type scale** with tabular numerals, so figures line up column to
-  column and each screen has one focal point instead of ten competing ones.
-- **Borders over shadows.** Elevation is reserved for things that genuinely
-  float — dialogs, the palette, toasts.
-- **Command palette** at <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd>, with
-  subsequence matching, and `g`-then-key navigation chords (`g` `t` for Tasks).
-- **Lucide** icon set, self-hosted **Inter** — the font ships with the bundle,
-  so the strict CSP needs no `font-src` exception and there is no third-party
-  request on first paint.
-- Focus-trapped dialogs, a skip link, `aria-live` toasts, sortable table
-  headers as real buttons, and `prefers-reduced-motion` honoured throughout.
-
----
-
-## API
-
-All routes are under `/api`. Mutations require the `X-CSRF-Token` header.
-
-| Method | Route | Access |
-|---|---|---|
-| `POST` | `/auth/register` · `/auth/login` · `/auth/admin/login` | public |
-| `GET` | `/auth/departments` | public (the signup picker needs it) |
-| `GET` | `/auth/me` | authenticated |
-| `POST` | `/auth/logout` · `/auth/change-password` | authenticated |
-| `GET` | `/tasks` (filter, search, paginate) | authenticated |
-| `POST` `PUT` | `/tasks` · `/tasks/<id>` | `tasks.manage` |
-| `DELETE` | `/tasks/<id>` | `tasks.delete` |
-| `GET` | `/assignments` · `/assignments/task/<id>` | `assignments.view_all` (dept-scoped for managers/leads) |
-| `GET` | `/assignments/mine` | authenticated |
-| `POST` `DELETE` | `/assignments` · `/assignments/<id>` | `assignments.manage`, in scope |
-| `PUT` | `/assignments/<id>/status` | owner, or `assignments.manage` in scope |
-| `GET` | `/employees` · `/employees/<id>` | `people.view` (dept-scoped), or yourself |
-| `POST` `PUT` `DELETE` | `/employees` · `/employees/<id>` | `people.manage`, rank + scope rules |
-| `PUT` · `POST` | `/employees/<id>/role` · `/employees/<id>/unlock` | `people.manage`, rank + scope rules |
-| `GET` | `/departments` | authenticated |
-| `POST` | `/departments` | `departments.manage` |
-| `GET` | `/dashboard/stats` | `dashboard.view` |
-| `GET` | `/dashboard/activity` | `audit.view` |
-| `GET` | `/admin/roles` | `people.view` |
-| `GET` | `/healthz` · `/readyz` | public |
-
----
-
-## Engineering notes
-
-Things worth asking me about:
-
-- **Authorization was the real bug.** The first version guarded task and
-  assignment endpoints with "is logged in" rather than "is allowed", so any
-  employee could delete tasks and edit other people's progress. Fixing it meant
-  separating authentication from authorization and writing the tests that prove
-  the difference.
-- **N+1 queries.** The task list issued one `COUNT` per task and the dashboard
-  loaded every assignment row into Python to tally statuses. Both are now a
-  single `GROUP BY`.
-- **Naive UTC timestamps.** The API serialises `datetime.utcnow()` with no zone
-  marker, so the browser read every timestamp as local time and labelled
-  everything "just now". Pinned in `format.test.ts`.
-- **Logout raced its own redirect.** Clearing the query cache left the auth
-  query pending, so the route guard read the last known user for one render and
-  bounced straight back to the dashboard. Signed-out is now modelled as data
-  (`null`), not as an absent value.
-- **Why not JWT?** Same-origin SPA, so a cookie is strictly better: `HttpOnly`
-  means a script cannot read it, and revocation is immediate. A token in
-  `localStorage` buys nothing here and is readable by any injected script.
-
----
-
-## Project layout
-
-```
-backend/
-  task_management/
-    routes/        HTTP layer — parse, delegate, respond
-    services/      business rules and validation
-    models/        SQLAlchemy models
-    config.py      env-driven, multi-engine
-    security.py    CSRF, security headers, request ids
-  migrations/      Alembic
-  tests/           pytest
-web/
-  src/
-    api/           typed client + TanStack Query hooks
-    auth/          session context and route guards
-    components/    Modal, Toast, ConfirmDialog, CommandPalette, primitives
-    layout/        app shell + single source of truth for navigation
-    pages/         one file per screen
-    styles/        tokens.css, base.css, components.css
-Dockerfile         two-stage build
-render.yaml        one-click Render blueprint
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff4ee','primaryTextColor':'#1c1917','primaryBorderColor':'#e8572a','lineColor':'#a8a29e','fontFamily':'ui-sans-serif, system-ui, sans-serif'}}}%%
+mindmap
+  root(("TaskForge"))
+    Front end
+      React 18
+      TypeScript 5.6
+      Vite 5
+      TanStack Query 5
+      React Router 6
+      Lucide icons
+    Back end
+      Flask 3
+      SQLAlchemy 2.0
+      Alembic
+      Gunicorn
+      Werkzeug scrypt
+    Data
+      PostgreSQL
+      MySQL
+      SQLite
+    Quality
+      pytest
+      Vitest
+      Testing Library
+      Ruff
+      GitHub Actions
+    Delivery
+      Docker multi-stage
+      Render blueprint
+      Health probes
 ```
 
 ---
+
+## 🧠 Engineering notes
+
+<details>
+<summary><b>Authorization was the real bug</b></summary>
+<br>
+
+The first version guarded task and assignment endpoints with *"is logged in"*
+rather than *"is allowed"*, so any employee could delete tasks and edit other
+people's progress. Fixing it meant separating authentication from authorization
+and writing the tests that prove the difference.
+
+</details>
+
+<details>
+<summary><b>N+1 queries in the list and the dashboard</b></summary>
+<br>
+
+The task list issued one `COUNT` per task, and the dashboard loaded every
+assignment row into Python to tally statuses. Both are now a single `GROUP BY`.
+
+</details>
+
+<details>
+<summary><b>Naive UTC timestamps</b></summary>
+<br>
+
+The API serialised `datetime.utcnow()` with no zone marker, so the browser read
+every timestamp as local time and labelled everything "just now". Pinned in
+`format.test.ts`.
+
+</details>
+
+<details>
+<summary><b>Logout raced its own redirect</b></summary>
+<br>
+
+Clearing the query cache left the auth query pending, so the route guard read the
+last known user for one render and bounced straight back to the dashboard.
+Signed-out is now modelled as data (`null`), not as an absent value.
+
+</details>
+
+<details>
+<summary><b>Why not JWT?</b></summary>
+<br>
+
+Same-origin SPA, so a cookie is strictly better: `HttpOnly` means a script cannot
+read it, and revocation is immediate. A token in `localStorage` buys nothing here
+and is readable by any injected script.
+
+</details>
+
+<details>
+<summary><b>Why the role is re-read every request</b></summary>
+<br>
+
+Caching the role in the session means a demotion takes effect whenever the cookie
+happens to expire. Re-reading it from the database on each request costs one
+indexed lookup and makes the demotion bind immediately.
+
+</details>
+
+---
+
+<div align="center">
 
 Built by **Ayush Yadav** · [MIT](LICENSE)
+
+</div>
